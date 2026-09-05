@@ -405,6 +405,19 @@
 /* Too narrow for a row: back to a stack, with the rule underneath each value
    where it belongs rather than a stray one down the side of a wrapped item. */
 @media (max-width: 40rem) {
+  /* And too narrow to justify. Measured across the widths the section is read
+     at, the worst gap a justified line opens is 2.5x to 4.5x a natural space
+     everywhere from 430px up — and 12.9x at 390px, where four short words have
+     a whole line to share out between them. The ragged edge is the better
+     reading on a phone, so the paragraphs keep the one they had. Hyphenation
+     goes with it: it is here to hold justified lines together, and on ragged
+     text it only breaks words that had no need to break. */
+  .about__prose p,
+  .about__cv-intro {
+    text-align: start;
+    hyphens: manual;
+  }
+
   .about__facts-list {
     grid-template-columns: 1fr;
     justify-content: stretch;
