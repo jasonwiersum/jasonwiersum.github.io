@@ -288,7 +288,10 @@ function Field({
   }
 
   return (
-    <div className="field" data-invalid={error ? true : undefined}>
+    <div
+      className={multiline ? 'field field--grow' : 'field'}
+      data-invalid={error ? true : undefined}
+    >
       <label className="visually-hidden" htmlFor={id}>
         {label}
       </label>

@@ -219,7 +219,15 @@
 
 /* --- Form ---------------------------------------------------------------- */
 
+/* A flex column, so the form can be told to fill it. The grid stretches this
+   card to the height of the links beside it, and the leftover height used to
+   collect under the submit button: the gap below the button read noticeably
+   wider than the gap above the name field, which is the one thing that gives
+   away that the card is taller than what is in it. Handing the slack to the
+   message box instead balances the two. */
 .contact__form-wrap {
+  display: flex;
+  flex-direction: column;
   padding: clamp(0.8rem, 1.3vw, 1.05rem);
   background: var(--background-elevated);
 }
@@ -229,12 +237,28 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  flex: 1 1 auto;
 }
 
 .field {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
+}
+
+/* The message row is the one that absorbs the card's spare height — the two
+   single-line fields and the button keep the size they have.
+
+   `1 1 auto`, never the `flex: 1` shorthand: that sets a zero basis, which
+   would throw away the height ContactForm measures onto the box and leave the
+   grown box no larger than an empty one. With an auto basis the measured
+   height is the floor and the spare height is added on top of it. The two stay
+   consistent because the measurement clears the height before reading it: the
+   box is stretched again while it is read, so what gets written back is the
+   height it already had, and it settles instead of creeping upward. */
+.field--grow,
+.field--grow .field__control {
+  flex: 1 1 auto;
 }
 
 .field__control {
@@ -247,6 +271,11 @@
   color: var(--foreground);
   font-size: var(--text-sm);
   line-height: 1.5;
+  /* The faintest of the shadow tokens: a 2px blur one pixel down, enough to
+     lift each bubble off the card without reading as a shadow. It is kept on
+     hover and focus — those rules only ever change the border colour — so the
+     box never appears to settle when you point at it. */
+  box-shadow: var(--shadow-xs);
   transition: border-color var(--dur-base) var(--ease-out),
     box-shadow var(--dur-base) var(--ease-out),
     background-color var(--dur-base) var(--ease-out);
@@ -335,6 +364,19 @@ textarea.field__control {
   padding-block: 0;
   padding-inline: 0.95rem;
   border-radius: var(--radius-md);
+  /* Same lift as the fields above it, for the same reason they share a height
+     and a corner: the four of them are one stack of controls. `.btn` carries
+     --shadow-sm by default, which next to the fields read as the button
+     floating a step above the form. */
+  box-shadow: var(--shadow-xs);
+}
+
+/* Hover still lifts, one step rather than three: --shadow-md over the fields'
+   --shadow-xs is the jump the default pairing would make. Specificity is why
+   this rule exists at all — `.btn:hover:not(:disabled)` outweighs the two
+   classes above it and would otherwise keep the larger shadow. */
+.btn.form__submit:hover:not(:disabled) {
+  box-shadow: var(--shadow-sm);
 }
 
 .form__spinner {
