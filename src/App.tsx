@@ -7,7 +7,7 @@ import { useSectionTransitions } from './hooks/useSectionTransitions'
 import { About } from './components/About/About'
 import { Contact } from './components/Contact/Contact'
 import { Hero } from './components/Hero/Hero'
-import { Ambience } from './components/Layout/Ambience'
+import { Backdrop } from './components/Layout/Backdrop'
 import { Footer } from './components/Layout/Footer'
 import { FloatingNavigation } from './components/Navigation/FloatingNavigation'
 import { SettingsIsland } from './components/Navigation/SettingsIsland'
@@ -42,7 +42,7 @@ export default function App() {
         {t.a11y.skipToContent}
       </a>
 
-      <Ambience />
+      <Backdrop />
 
       <FloatingNavigation activeSection={activeSection} onSelect={goToSection} />
       <SettingsIsland />

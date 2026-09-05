@@ -352,3 +352,37 @@ p {
   position: relative;
   z-index: var(--z-content);
 }
+
+/* The page as one sheet lifted off the backdrop, so the gradient reads as
+   something the content is floating over rather than something printed behind
+   it. Translucent, not solid: the gradient still moves underneath, tinted.
+
+   No `backdrop-filter` here on purpose. The sheet is as tall as the document
+   and the shader repaints under it every frame, so a blur would be recomputed
+   over the whole thing continuously — the one part of this that a phone would
+   feel. The translucency alone gives the same read. */
+.page--sheet {
+  /* Exactly `--container` wide, and no padding of its own: `.container` inside
+     already reserves a gutter on each side, so the sheet lands on the line the
+     content was already stopping at and nothing inside it gets narrower. What
+     the page gives up is the empty margin outside that line, which is where the
+     gradient now shows. */
+  max-width: min(var(--container), calc(100% - 2 * var(--space-6)));
+  margin-inline: auto;
+  margin-block: var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Edge to edge on a phone: an inset sheet there costs the content the little
+   width it has, and the shadow has nowhere to fall. */
+@media (max-width: 48rem) {
+  .page--sheet {
+    margin-block: 0;
+    padding-inline: 0;
+    border-inline: 0;
+    border-radius: 0;
+  }
+}
