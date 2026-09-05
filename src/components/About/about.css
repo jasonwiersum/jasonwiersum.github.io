@@ -32,9 +32,15 @@
   margin-block-start: var(--space-3);
 }
 
+/* Justified so the paragraph block reads as one clean column beside the
+   portrait. German compounds are long enough to open rivers between the words,
+   so hyphenation comes along with it — the document language is kept in sync
+   with the UI language, which is what `hyphens: auto` needs to break correctly. */
 .about__prose p {
   color: var(--muted);
   line-height: var(--leading-relaxed);
+  text-align: justify;
+  hyphens: auto;
 }
 
 /* --- Facts panel --------------------------------------------------------- */
@@ -166,11 +172,16 @@
   margin-block-start: var(--space-5);
 }
 
+/* Same treatment as the prose above it: it is the last paragraph of the same
+   column and 40rem wide like the rest, so a ragged edge here would be the one
+   line that does not line up. */
 .about__cv-intro {
   max-width: 40rem;
   margin-block-end: var(--space-4);
   color: var(--muted);
   line-height: var(--leading-relaxed);
+  text-align: justify;
+  hyphens: auto;
 }
 
 /* Both buttons the same width, set by the wider label — they sit together and

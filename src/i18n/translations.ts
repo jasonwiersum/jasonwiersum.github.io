@@ -21,9 +21,9 @@ export const HTML_LANG: Record<Language, string> = {
 
 const es = {
   meta: {
-    title: 'Jason Wiersum — Anwendungsentwickler',
+    title: 'Jason Wiersum | Anwendungsentwickler',
     description:
-      'Jason Wiersum — Desarrolador de aplicaciones certificado por la IHK en Nürnberg. Software, diseño y creatividad en un mismo perfil.',
+      'Jason Wiersum | Desarrollador de aplicaciones certificado por la IHK en Nürnberg. Software, diseño y creatividad en un mismo perfil.',
   },
   a11y: {
     skipToContent: 'Saltar al contenido',
@@ -157,9 +157,9 @@ export type Translation = typeof es
 
 const en: Translation = {
   meta: {
-    title: 'Jason Wiersum — Anwendungsentwickler',
+    title: 'Jason Wiersum | Anwendungsentwickler',
     description:
-      'Jason Wiersum — IHK-certified Anwendungsentwickler based in Nürnberg. Software, design and creativity in one profile.',
+      'Jason Wiersum | IHK-certified Anwendungsentwickler based in Nürnberg. Software, design and creativity in one profile.',
   },
   a11y: {
     skipToContent: 'Skip to content',
@@ -284,9 +284,9 @@ const en: Translation = {
 
 const de: Translation = {
   meta: {
-    title: 'Jason Wiersum — Anwendungsentwickler',
+    title: 'Jason Wiersum | Anwendungsentwickler',
     description:
-      'Jason Wiersum — IHK-zertifizierter Anwendungsentwickler aus Nürnberg. Software, Design und Kreativität in einem Profil.',
+      'Jason Wiersum | IHK-zertifizierter Anwendungsentwickler aus Nürnberg. Software, Design und Kreativität in einem Profil.',
   },
   a11y: {
     skipToContent: 'Zum Inhalt springen',
