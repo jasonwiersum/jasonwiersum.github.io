@@ -10,8 +10,8 @@
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(58% 52% at 50% 50%, var(--glow-a), transparent 70%),
-    radial-gradient(42% 38% at 50% 50%, var(--glow-b), transparent 74%);
+    radial-gradient(58% 52% at 50% 50%, var(--wash-a), transparent 70%),
+    radial-gradient(42% 38% at 50% 50%, var(--wash-b), transparent 74%);
   opacity: 0.85;
   transition: opacity var(--dur-slow) var(--ease-out);
 }
