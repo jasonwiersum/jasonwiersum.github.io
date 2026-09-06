@@ -16,7 +16,7 @@ import './about.css'
  * something broken on the page, and a download that 404s is worse than no
  * button at all.
  */
-function Cv() {
+function Cv({ ready }: { ready: boolean }) {
   const { t } = useLanguage()
   const [available, setAvailable] = useState(false)
   const [origin, setOrigin] = useState<DOMRect | null>(null)
@@ -42,7 +42,12 @@ function Cv() {
   if (!available) return null
 
   return (
-    <div className="about__cv" data-reveal>
+    /* `data-shown` rather than `data-reveal`: this block is not brought in by
+       its own position on the screen but by the timeline above it reaching its
+       last point — see about.css and the note in Timeline.tsx. Leaving
+       `data-reveal` on as well would put useReveal's opacity in a fight with
+       the CSS transition. */
+    <div className="about__cv" data-shown={ready || undefined}>
       <p className="about__cv-intro">{t.about.cvIntro}</p>
 
       <div className="about__cv-actions">
@@ -104,6 +109,10 @@ export function About() {
   const { t } = useLanguage()
   const root = useRef<HTMLDivElement>(null)
   useReveal(root)
+  /** Whether the line has reached the point it ends on. The CV block waits for
+   *  it, so "read the whole history" cannot arrive before the history has
+   *  finished drawing. */
+  const [pathDone, setPathDone] = useState(false)
 
   return (
     <div className="about" ref={root}>
@@ -149,9 +158,9 @@ export function About() {
             capped at 40rem — about what the column gave it — and the buttons
             are an inline-grid that takes its width from the wider label, so
             neither of them stretches now that the room is wider. */}
-        <Timeline />
+        <Timeline onComplete={setPathDone} />
 
-        <Cv />
+        <Cv ready={pathDone} />
 
         {/* Full width, under both columns: the facts read as one row of labelled
             values rather than a narrow stack beside the portrait. The heading
