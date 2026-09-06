@@ -74,6 +74,7 @@ const es = {
     cvView: 'Ver CV',
     cv: 'Descargar CV',
     cvTitle: 'Currículum',
+    timelineTitle: 'Mi camino',
     factsTitle: 'Resumen',
     facts: [
       { label: 'Nombre', value: 'Jason Wiersum' },
@@ -209,6 +210,7 @@ const en: Translation = {
     cvView: 'View CV',
     cv: 'Download CV',
     cvTitle: 'Curriculum vitae',
+    timelineTitle: 'My path',
     factsTitle: 'In short',
     facts: [
       { label: 'Name', value: 'Jason Wiersum' },
@@ -336,6 +338,7 @@ const de: Translation = {
     cvView: 'Lebenslauf ansehen',
     cv: 'Lebenslauf herunterladen',
     cvTitle: 'Lebenslauf',
+    timelineTitle: 'Mein Weg',
     factsTitle: 'Zusammengefasst',
     facts: [
       { label: 'Name', value: 'Jason Wiersum' },

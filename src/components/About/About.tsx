@@ -4,6 +4,7 @@ import { SITE } from '../../config/site'
 import { useLanguage } from '../../hooks/useLanguage'
 import { useReveal } from '../../hooks/useReveal'
 import { CvDialog } from './CvDialog'
+import { Timeline } from './Timeline'
 import './about.css'
 
 /**
@@ -134,6 +135,13 @@ export function About() {
             <Portrait alt={t.about.portraitAlt} />
           </aside>
         </div>
+
+        {/* Full width, straight after the prose. The paragraphs above say the
+            path did not start in IT; this is that path, and it answers the
+            claim while the claim is still on screen. It needs both columns —
+            alternating points inside the 1.22fr text column would be two very
+            narrow ones. */}
+        <Timeline />
 
         {/* Full width, under both columns: the facts read as one row of labelled
             values rather than a narrow stack beside the portrait. The heading
