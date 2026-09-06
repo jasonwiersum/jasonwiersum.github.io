@@ -170,6 +170,9 @@
 
 .about__cv {
   margin-block-start: var(--space-5);
+  /* Centres `.about__cv-actions`, which is an inline-grid. Only that: the
+     paragraph declares its own `text-align`, so this reaches nothing else. */
+  text-align: center;
 }
 
 /* Following the line rather than the prose, it needs the room the line's own
@@ -189,6 +192,12 @@
    line that does not line up. */
 .about__cv-intro {
   max-width: 40rem;
+  /* Centred as a column of its own, because the block it sits in is now full
+     width. It came out of the 1.22fr text column when the timeline went in, and
+     a 40rem paragraph pinned to the left edge of a full-width block with the
+     buttons centred under it would be two different alignments in four
+     centimetres. */
+  margin-inline: auto;
   margin-block-end: var(--space-4);
   color: var(--muted);
   line-height: var(--leading-relaxed);
@@ -206,6 +215,9 @@
    gives two equal buttons. */
 .about__cv-actions {
   display: inline-grid;
+  /* Centred by the parent's `text-align`, not by a flex container: this is an
+     inline-level box, so it goes where the text goes. `.about__cv-intro` sets
+     its own alignment, so nothing above it inherits this. */
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
   gap: var(--space-3);
