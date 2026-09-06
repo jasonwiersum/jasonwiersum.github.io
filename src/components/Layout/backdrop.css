@@ -19,3 +19,23 @@
   background: var(--background);
   opacity: var(--backdrop-scrim);
 }
+
+/* The phone's sheet, moved onto the fixed backdrop.
+ *
+ * Two problems, one cause. Rubber-banding at the top or the bottom slid the
+ * sheet away from the edge of the screen and showed the raw gradient in the
+ * gap behind it — the sheet scrolls with the document, this layer does not.
+ * And the sheet's paint sat on top of the scrim, so the two multiplied and
+ * left the light theme looking like plain white with the blue barely in it.
+ *
+ * Painting that surface here instead fixes both: it is fixed, so it covers the
+ * overscroll gap and there is nothing to see behind it, and it is the only
+ * veil in the stack, so its own alpha is the whole answer to how much gradient
+ * comes through. The sheet keeps its layout on the phone and paints nothing —
+ * `background: none` in globals.css. */
+@media (max-width: 48rem) {
+  .backdrop__scrim {
+    background: var(--backdrop-veil-phone);
+    opacity: 1;
+  }
+}

@@ -271,11 +271,11 @@
   color: var(--foreground);
   font-size: var(--text-sm);
   line-height: 1.5;
-  /* The faintest of the shadow tokens: a 2px blur one pixel down, enough to
-     lift each bubble off the card without reading as a shadow. It is kept on
+  /* A 3px blur one pixel down, enough to lift each bubble off the card
+     without reading as a shadow. It is kept on
      hover and focus — those rules only ever change the border colour — so the
      box never appears to settle when you point at it. */
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-field);
   transition: border-color var(--dur-base) var(--ease-out),
     box-shadow var(--dur-base) var(--ease-out),
     background-color var(--dur-base) var(--ease-out);
@@ -286,7 +286,7 @@
 }
 
 .field__control::placeholder {
-  color: var(--faint);
+  color: var(--placeholder);
 }
 
 /* `:not(:focus)` so hovering a field you are already typing in does not take
@@ -368,11 +368,11 @@ textarea.field__control {
      and a corner: the four of them are one stack of controls. `.btn` carries
      --shadow-sm by default, which next to the fields read as the button
      floating a step above the form. */
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-field);
 }
 
 /* Hover still lifts, one step rather than three: --shadow-md over the fields'
-   --shadow-xs is the jump the default pairing would make. Specificity is why
+   --shadow-field is the jump the default pairing would make. Specificity is why
    this rule exists at all — `.btn:hover:not(:disabled)` outweighs the two
    classes above it and would otherwise keep the larger shadow. */
 .btn.form__submit:hover:not(:disabled) {
