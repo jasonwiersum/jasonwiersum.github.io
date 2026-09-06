@@ -102,8 +102,11 @@ export const milestones: Milestone[] = [
       en: 'Moved to Germany and started in hospitality',
       de: 'Umzug nach Deutschland, Einstieg in die Gastronomie',
     },
-    // NOT IN THE CV. The CV runs Málaga to 10/2012 and picks up again at
-    // 11/2015 with the Admiral, leaving these three years as a gap.
+    // Not in the CV, and deliberately so on both sides: the CV runs Málaga to
+    // 10/2012 and picks up again at 11/2015 with the Admiral, leaving these
+    // three years as a gap, and Jason's decision is that the line tells them
+    // and the document stays as it is. So the two disagree here ON PURPOSE —
+    // do not "fix" it by deleting this point.
     place: 'La Bodega de Ramón',
   },
   {
