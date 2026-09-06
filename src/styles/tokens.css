@@ -104,9 +104,18 @@
 
   --surface: rgba(255, 255, 255, 0.72);
   --surface-solid: #ffffff;
-  --surface-glass: rgba(255, 255, 255, 0.55);
-  --surface-glass-strong: rgba(255, 255, 255, 0.71);
+  /* Heavier than they were. The islands float over the bare gradient now, not
+     over a background the scrim had flattened, and at 0.55 the nav item text
+     measured 3.95:1 against the blue end of it — it was 6.36:1 before. The
+     dark theme keeps 0.55: its gradient's bright end is a far smaller step
+     from the interface around it, and it still measures 5.45:1 there. */
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --surface-glass-strong: rgba(255, 255, 255, 0.85);
   --surface-sunken: rgba(15, 20, 36, 0.045);
+  /* The floating sheet. Its own token rather than --surface because the phone
+     needs a heavier one and --surface is used by every card on the page. */
+  --sheet-surface: rgba(255, 255, 255, 0.72);
+  --sheet-surface-phone: rgba(255, 255, 255, 0.9);
 
   --border: rgba(15, 20, 36, 0.12);
   --border-strong: rgba(15, 20, 36, 0.22);
@@ -147,8 +156,13 @@
   --shadow-window: 0 0 20px rgba(15, 20, 36, 0.14);
 
   --grain-opacity: 0.035;
-  /* How much of the page background is held over the animated backdrop. */
-  --backdrop-scrim: 0.62;
+  /* How much of the page background is held over the animated backdrop.
+     It was 0.62 while body copy sat straight on the gradient; all of it moved
+     onto the sheet, and the only things left over the bare gradient are the two
+     glass islands, which carry their own ground. At 0.62 the gradient reached
+     the eye through the sheet at 0.28 x 0.38 = 10% of itself, and measured over
+     six seconds the whole page varied by 2.6/255 — still, to any eye. */
+  --backdrop-scrim: 0.22;
   --glow-a: rgba(0, 56, 255, 0.14);
   --glow-b: rgba(255, 138, 76, 0.1);
 
@@ -251,6 +265,10 @@
   --surface-glass: rgba(24, 26, 35, 0.55);
   --surface-glass-strong: rgba(24, 26, 35, 0.73);
   --surface-sunken: rgba(255, 255, 255, 0.04);
+  --sheet-surface: rgba(255, 255, 255, 0.05);
+  /* Not a white veil at 0.9 — that would be a light sheet. The dark theme's
+     own solid surface, held back the same tenth. */
+  --sheet-surface-phone: rgba(20, 22, 30, 0.9);
 
   --border: rgba(255, 255, 255, 0.1);
   --border-strong: rgba(255, 255, 255, 0.2);
@@ -277,7 +295,9 @@
     0 12px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.4);
 
   --grain-opacity: 0.05;
-  --backdrop-scrim: 0.72;
+  /* Higher than light's: the dark gradient's bright end is the accent against
+     near-black, which is a far larger step than anything the light one makes. */
+  --backdrop-scrim: 0.34;
   --glow-a: rgba(91, 132, 255, 0.16);
   --glow-b: rgba(255, 138, 76, 0.08);
 

@@ -135,7 +135,7 @@ void mainImage(out vec4 o, vec2 C){
     // pattern outward alone is a lens with no colour to it, and pulling the
     // blend alone is a spotlight that does not move. Together the gradient
     // swells around the pointer and darkens toward the accent as it goes.
-    tuv+=normalize(toPointer+vec2(1e-5))*mouseEffect*0.09;
+    tuv+=normalize(toPointer+vec2(1e-5))*mouseEffect*0.14;
   }
 
   vec3 colLav=uColor1;
@@ -144,7 +144,7 @@ void mainImage(out vec4 o, vec2 C){
   float b=uColorBalance;
   float s=max(uBlendSoftness,0.0);
   mat2 blendRot=Rot(radians(uBlendAngle));
-  float blendX=(tuv*blendRot).x-mouseEffect*0.28;
+  float blendX=(tuv*blendRot).x-mouseEffect*0.42;
   float edge0=-0.3-b-s;
   float edge1=0.2-b+s;
   float v0=0.5-b+s;
