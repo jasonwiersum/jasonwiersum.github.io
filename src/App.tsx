@@ -7,7 +7,7 @@ import { useSectionTransitions } from './hooks/useSectionTransitions'
 import { About } from './components/About/About'
 import { Contact } from './components/Contact/Contact'
 import { Hero } from './components/Hero/Hero'
-import { Ambience } from './components/Layout/Ambience'
+import { Backdrop } from './components/Layout/Backdrop'
 import { Footer } from './components/Layout/Footer'
 import { FloatingNavigation } from './components/Navigation/FloatingNavigation'
 import { SettingsIsland } from './components/Navigation/SettingsIsland'
@@ -42,28 +42,32 @@ export default function App() {
         {t.a11y.skipToContent}
       </a>
 
-      <Ambience />
+      <Backdrop />
 
       <FloatingNavigation activeSection={activeSection} onSelect={goToSection} />
       <SettingsIsland />
 
-      <main id="main" className="page" ref={mainRef}>
-        <Hero />
+      {/* Everything that is read sits on one sheet, the footer included: the
+          gradient behind it shows in the margin, and the content floats. */}
+      <div className="sheet">
+        <main id="main" className="page" ref={mainRef}>
+          <Hero />
 
-        {/* Work is what he does: the output first, the tools underneath it. */}
-        <section id="work" className="section">
-          <Projects />
-          <Skills />
-        </section>
+          {/* Work is what he does: the output first, the tools underneath it. */}
+          <section id="work" className="section">
+            <Projects />
+            <Skills />
+          </section>
 
-        <section id="about" className="section">
-          <About />
-        </section>
+          <section id="about" className="section">
+            <About />
+          </section>
 
-        <Contact />
-      </main>
+          <Contact />
+        </main>
 
-      <Footer />
+        <Footer />
+      </div>
     </>
   )
 }

@@ -147,6 +147,8 @@
   --shadow-window: 0 0 20px rgba(15, 20, 36, 0.14);
 
   --grain-opacity: 0.035;
+  /* How much of the page background is held over the animated backdrop. */
+  --backdrop-scrim: 0.62;
   --glow-a: rgba(0, 56, 255, 0.14);
   --glow-b: rgba(255, 138, 76, 0.1);
 
@@ -275,6 +277,7 @@
     0 12px 34px -12px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.4);
 
   --grain-opacity: 0.05;
+  --backdrop-scrim: 0.72;
   --glow-a: rgba(91, 132, 255, 0.16);
   --glow-b: rgba(255, 138, 76, 0.08);
 

@@ -1,0 +1,21 @@
+/* Fixed and behind everything, like the wash it replaces: the gradient is the
+   page's ground, not something that scrolls with it. */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* A veil of the page background over the gradient. The shader runs the full
+   range from the background colour to the accent, and at full strength the
+   accent end is a solid blue that body copy cannot sit on. This holds the
+   gradient back to a tint of itself, so the movement still reads and the text
+   above it keeps its contrast. */
+.backdrop__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--background);
+  opacity: var(--backdrop-scrim);
+}
