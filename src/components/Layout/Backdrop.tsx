@@ -28,12 +28,13 @@ const PHONE = '(max-width: 48rem)'
  * touching.
  *
  * It scrolls, at three tenths of the page's own speed, so the sheet reads as
- * something travelling over it rather than as a window onto something pinned.
+ * something travelling over it rather than as a window onto something pinned —
+ * except under `prefers-reduced-motion`, where the scroll link is the one part
+ * of this that the preference is for.
  *
  * It reacts to the pointer: the gradient swells around it and leans toward the
  * accent within half a screen, and follows on a delay rather than tracking it
- * exactly. Not under `prefers-reduced-motion` — the whole thing is held on one
- * frame there, and a backdrop that answers the mouse is still motion.
+ * exactly.
  *
  * The palette is the site's own. In light it runs from the page background up
  * to the accent, with the lighter accent as the tone between them; in dark it
@@ -101,8 +102,18 @@ export function Backdrop() {
         zoom={0.9}
         enableMouseInteraction
         mouseRadius={0.5}
-        scrollParallax={0.3}
-        paused={reducedMotion}
+        /* The one thing here that is scroll-linked travel, and the one thing
+           the preference is actually about. */
+        scrollParallax={reducedMotion ? 0 : 0.3}
+        /* Not paused under `prefers-reduced-motion`, which is a reversal: it
+           used to be, and the result was a backdrop frozen dead for anyone with
+           the OS setting on — measured, 0.000 of 255 over two and a half
+           seconds against 16.4 without it. The preference is about travel, as
+           motionBudget says in as many words, and this is a colour drifting
+           across tens of seconds with nothing moving through space. The
+           parallax above is the part that does travel, and that is what stops
+           instead. */
+        paused={false}
       />
       <div className="backdrop__scrim" />
     </div>

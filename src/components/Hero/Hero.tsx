@@ -35,17 +35,25 @@ export function Hero() {
       const targets = gsap.utils.toArray<HTMLElement>('[data-hero-item]')
       const stage = root.current?.querySelector('.hero__stage')
 
-      // On a phone the two lines are staged rather than arriving together: the
-      // greeting a second in, the line under it at two and a half. They are the
-      // only thing on that first screen, so they can afford to take their time,
-      // and the wave is playing beside them in the meantime.
+      // Both lines are staged rather than arriving together, on a phone and now
+      // on a desktop too: the greeting first, the line under it a second later.
+      //
+      // The desktop used to open the greeting at 0.08s and start the tagline
+      // 0.16s after it, which is not a stagger anyone can see — the two landed
+      // together and the greeting read as having been there all along. A phone
+      // waits longer than this because the two lines are the whole of its first
+      // screen and the wave is playing beside them; a desktop has the character
+      // arriving at the same time, so it does not need as much.
+      //
+      // These are timeline positions, not durations, so they are not the motion
+      // budget's to cut: under `prefers-reduced-motion` the travel goes and the
+      // fades shorten, but the order and the pacing survive.
       //
       // Both still animate FROM an offset, so where they finish is where the
       // layout puts them — nothing here decides their position.
       const phone = window.matchMedia(`(max-width: ${PHONE}px)`).matches
       const tl = gsap.timeline({
         defaults: { ease: 'power3.out' },
-        delay: phone ? 0 : 0.08,
       })
 
       // The greeting arrives on its own, and quickly — it is the first thing
@@ -57,9 +65,9 @@ export function Hero() {
           {
             opacity: 0,
             y: budget.travel(phone ? 22 : 14),
-            duration: budget.duration(phone ? 0.6 : 0.3),
+            duration: budget.duration(phone ? 0.6 : 0.55),
           },
-          phone ? 1 : 0,
+          phone ? 1 : 0.55,
         )
       }
 
@@ -71,7 +79,7 @@ export function Hero() {
           duration: budget.duration(phone ? 0.6 : 0.72),
           stagger: budget.stagger(0.075),
         },
-        phone ? 2.5 : budget.duration(0.16),
+        phone ? 2.5 : 1.55,
       )
 
       if (stage) {
@@ -83,7 +91,7 @@ export function Hero() {
             duration: budget.duration(1.05),
             ease: 'power2.out',
           },
-          budget.reduced ? 0 : 0.1,
+          budget.reduced ? 0 : 0.35,
         )
       }
     },

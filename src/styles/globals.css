@@ -380,33 +380,44 @@ p {
      at their middle, which is what gave away that they are separate things. */
   margin-block: calc(2 * var(--space-4) + var(--island-h)) var(--space-6);
   border: 1px solid var(--border);
+  border-top-color: transparent;
   border-radius: var(--radius-xl);
-  background: var(--sheet-surface);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-sheet);
   /* The footer's rule and the hero's corners have to stop at the sheet's own,
      or they run out past the rounding. */
   overflow: hidden;
+}
+
+/* The surface, on its own layer so it can arrive rather than start.
+ *
+ * Painted on the sheet it began at full strength on the first row, and that
+ * straight edge running out from under the settings islands is what read as a
+ * line under them. Taking the border off halved it and left the surface's own
+ * step, which was still a line. Faded in over the first 96px there is no step
+ * to see: nothing changes by more than a fraction of a level from one row to
+ * the next, and by the time there is any content the surface is at full
+ * strength.
+ *
+ * Behind the content and inside the sheet's own stacking context — the sheet
+ * has a z-index, so a negative one here cannot escape it and reach the
+ * backdrop. */
+.sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--sheet-surface);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 96px);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 96px);
 }
 
 .page {
   position: relative;
 }
 
-/* The one edge that reads as a drawn line rather than as the edge of a sheet.
-   It runs out from under the settings islands when they open — they sit
-   `--space-4` above it and the sheet's top-right corner is right under them —
-   and on a dark ground a light hairline there is a bar, which is what it looked
-   like. Measured at the crop beside the islands, the step across that edge is
-   26.6 of 255 with the border and 12.1 without it: over half the line is the
-   border, and what is left is the surface, which is a tonal change rather than
-   a stroke.
-
-   Dark only, and only the top. Against the pale gradient the light theme's step
-   is the surface almost entirely — taking its border off moves nothing — and
-   the other three sides are what make the sheet read as a sheet. */
-[data-theme='dark'] .sheet {
-  border-top-color: transparent;
-}
+/* On a phone the sheet is layout only, so the surface layer has nothing to
+   draw either — the static wash is the background there. */
 
 /* Edge to edge on a phone: an inset sheet there costs the content the little
    width it has, and the shadow has nowhere to fall. */
