@@ -180,9 +180,9 @@ export const milestones: Milestone[] = [
     // one place, two roles, so one point rather than two.
     place: 'Admiral Filmtheater, Nürnberg',
     detail: {
-      es: 'Barra, caja, personal y turnos',
-      en: 'Bar, till, staffing and rotas',
-      de: 'Bar, Kasse, Personal und Dienstplanung',
+      es: 'Barra, caja, personal y turnos.',
+      en: 'Bar, till, staffing and rotations.',
+      de: 'Bar, Kasse, Personal und Dienstplanung.',
     },
   },
   {
@@ -204,9 +204,9 @@ export const milestones: Milestone[] = [
     detail: {
       // "cumplimiento normativo" rather than the English word: it is what the
       // term is called in Spanish, and the point is to be understood.
-      es: 'Cuadres, control financiero y cumplimiento normativo',
-      en: 'Reconciliation, controlling and compliance',
-      de: 'Abrechnung, Finanzkontrolle und Compliance',
+      es: 'Cuadres, control financiero y cumplimiento normativo.',
+      en: 'Reconciliation, controlling and compliance.',
+      de: 'Abrechnung, Finanzkontrolle und Compliance.',
     },
   },
   {
@@ -223,9 +223,9 @@ export const milestones: Milestone[] = [
     // the retraining is where this line was asked to end.
     place: 'GFN GmbH, Nürnberg',
     detail: {
-      es: 'Prácticas en el Bayerisches Landesamt für Statistik. Examen de la IHK aprobado.',
-      en: 'Placement at the Bayerisches Landesamt für Statistik. IHK examination passed.',
-      de: 'Praktikum beim Bayerischen Landesamt für Statistik. IHK-Prüfung bestanden.',
+      es: 'Prácticas en el Bayerisches Landesamt für Statistik..',
+      en: 'Placement at the Bayerisches Landesamt für Statistik.',
+      de: 'Praktikum beim Bayerischen Landesamt für Statistik.',
     },
     emphasis: true,
   },
