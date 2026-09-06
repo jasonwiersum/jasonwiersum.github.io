@@ -392,6 +392,22 @@ p {
   position: relative;
 }
 
+/* The one edge that reads as a drawn line rather than as the edge of a sheet.
+   It runs out from under the settings islands when they open — they sit
+   `--space-4` above it and the sheet's top-right corner is right under them —
+   and on a dark ground a light hairline there is a bar, which is what it looked
+   like. Measured at the crop beside the islands, the step across that edge is
+   26.6 of 255 with the border and 12.1 without it: over half the line is the
+   border, and what is left is the surface, which is a tonal change rather than
+   a stroke.
+
+   Dark only, and only the top. Against the pale gradient the light theme's step
+   is the surface almost entirely — taking its border off moves nothing — and
+   the other three sides are what make the sheet read as a sheet. */
+[data-theme='dark'] .sheet {
+  border-top-color: transparent;
+}
+
 /* Edge to edge on a phone: an inset sheet there costs the content the little
    width it has, and the shadow has nowhere to fall. */
 @media (max-width: 48rem) {
@@ -400,15 +416,16 @@ p {
        resetting the border and the radius alone left the sheet floating in a
        32px channel of gradient with square corners, which is the worst of
        both. */
+    /* Layout only: no paint, no frame, no shadow. A phone gets the static
+       wash back as its background (see Backdrop), which is the ground the page
+       had before the sheet existed, so the sheet has nothing left to be there
+       — and nothing that can pull away from the edge of the screen on a
+       rubber-band scroll and leave a gap behind it. */
     max-width: none;
     margin-block: 0;
-    border-inline: 0;
+    border: 0;
     border-radius: 0;
-    /* And no paint of its own. The surface it used to carry now lives on the
-       fixed backdrop instead — see backdrop.css. The sheet scrolls with the
-       document, so at the top and bottom of a rubber-band scroll it pulled
-       away from the edge of the screen and left the raw gradient showing in
-       the gap; the layer that replaces it cannot, because it never moves. */
     background: none;
+    box-shadow: none;
   }
 }

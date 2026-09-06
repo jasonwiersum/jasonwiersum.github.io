@@ -34,8 +34,25 @@ const SMILE = `${import.meta.env.BASE_URL}character/smile.mp4`
  *  Same shot as the rest — measured, the head sits at 49.62% of the width
  *  against the idle's 49.64% — so it shares their box and crop. */
 const COFFEE = `${import.meta.env.BASE_URL}character/coffee.mp4`
-/** Slot 0 opens, slot 1 answers, and back. */
-const LOOP = [IDLE, COFFEE]
+/** The third take. Same shot as the rest — measured, the head sits within a
+ *  fifth of a percent of the others' — so it shares their box and crop too. */
+const YAWN = `${import.meta.env.BASE_URL}character/yawn.mp4`
+/**
+ * The resting cycle, in order: a take, a rest, the next take, and round again.
+ *
+ * One <video> per clip rather than two elements passing three sources between
+ * them. Swapping `src` on an element throws away exactly the thing the spare
+ * has to prove before anything is handed to it — that it has decoded a frame
+ * and can paint — so every hand-over would have to prove it again, and the
+ * proof is a play/pause round trip. Three elements keep one proof each.
+ *
+ * Measured on the composited crop, the two seams this order adds are the best
+ * in the set: coffee's last frame to yawn's first is 1.81 of 255, which is
+ * inside coffee's own frame-to-frame step of 1.74, and yawn's last to the
+ * idle's first is 4.00, against 4.30 for the greeting hand-over that was
+ * called perfect.
+ */
+const LOOP = [IDLE, COFFEE, YAWN]
 
 /** Gaze of every frame, flattened — read once per animation frame, so the pair
  *  of numbers should be adjacent in memory rather than behind two lookups. */
@@ -144,13 +161,15 @@ export function CharacterStage() {
    * With both, the worst case is the wrap staying a cut, which is where this
    * started. It is never a blank frame.
    */
-  const loopNodes = useRef<Array<HTMLVideoElement | null>>([null, null])
+  const loopNodes = useRef<Array<HTMLVideoElement | null>>(LOOP.map(() => null))
   /** Which layer is showing. The ref is what callbacks read, the state is what
    *  the render needs, and they are always set together. */
   const [loopSlot, setLoopSlot] = useState(0)
   const loopSlotRef = useRef(0)
-  const spareReady = useRef(false)
-  const spareDead = useRef(false)
+  /** Per slot now that there are three of them: one clip proving it can paint,
+   *  or failing to load, says nothing about the next. */
+  const spareReady = useRef<boolean[]>(LOOP.map(() => false))
+  const spareDead = useRef<boolean[]>(LOOP.map(() => false))
   const [smileBroken, setSmileBroken] = useState(false)
   const smileNode = useRef<HTMLVideoElement | null>(null)
   /** When each of the last few taps landed, oldest first. */
@@ -224,7 +243,7 @@ export function CharacterStage() {
       // wrap that stays a cut, not a character that disappears.
       const fail = () => {
         if (slot === 0) setIdleBroken(true)
-        else spareDead.current = true
+        else spareDead.current[slot] = true
       }
       if (node.error || node.networkState === node.NETWORK_NO_SOURCE) {
         fail()
@@ -284,7 +303,7 @@ export function CharacterStage() {
     // Start pulling the other half of the loop down now, with a take and a rest
     // still to run before it is wanted. Nothing depends on it arriving: if it
     // has not, the hand-over does not happen and the same clip plays again.
-    const other = loopNodes.current[loopSlotRef.current === 0 ? 1 : 0]
+    const other = loopNodes.current[(loopSlotRef.current + 1) % LOOP.length]
     if (other && other.preload === 'none' && !other.error) {
       other.preload = 'auto'
       other.load()
@@ -315,29 +334,40 @@ export function CharacterStage() {
    * place: no swap, and `startIdle` cuts back to frame 0 as it always did.
    */
   const handOverLoop = useCallback(async () => {
-    if (spareDead.current) return
-    const next = loopSlotRef.current === 0 ? 1 : 0
-    const node = loopNodes.current[next]
-    if (!node || node.error || node.readyState < 2) return
+    // Walk forward through the cycle rather than stopping at the first clip
+    // that is not ready. With two of them the only alternative to the next one
+    // was staying put; with three, a yawn that has not arrived should hand to
+    // the idle rather than making the coffee follow itself. The loop runs at
+    // most once per other clip, so a cycle where nothing else is ready ends
+    // where it started.
+    const from = loopSlotRef.current
+    for (let step = 1; step < LOOP.length; step += 1) {
+      const next = (from + step) % LOOP.length
+      if (spareDead.current[next]) continue
+      const node = loopNodes.current[next]
+      if (!node || node.error || node.readyState < 2) continue
 
-    if (!spareReady.current) {
-      try {
-        const started = node.play()
-        if (started) await started
-        node.pause()
-        // videoWidth only becomes non-zero once a frame has been decoded, so
-        // this is the difference between "loaded" and "has something to draw".
-        if (node.videoWidth > 0) spareReady.current = true
-      } catch {
-        return
+      if (!spareReady.current[next]) {
+        try {
+          const started = node.play()
+          if (started) await started
+          node.pause()
+          // videoWidth only becomes non-zero once a frame has been decoded, so
+          // this is the difference between "loaded" and "has something to
+          // draw".
+          if (node.videoWidth > 0) spareReady.current[next] = true
+        } catch {
+          continue
+        }
+        if (!spareReady.current[next]) continue
       }
-      if (!spareReady.current) return
-    }
 
-    node.pause()
-    if (node.currentTime !== 0) node.currentTime = 0
-    loopSlotRef.current = next
-    setLoopSlot(next)
+      node.pause()
+      if (node.currentTime !== 0) node.currentTime = 0
+      loopSlotRef.current = next
+      setLoopSlot(next)
+      return
+    }
   }, [])
 
   /**
@@ -786,18 +816,19 @@ export function CharacterStage() {
           No `loop`: the pause between takes is the whole design, so each take
           is started deliberately. */}
       {idle
-        ? [0, 1].map((slot) => (
+        ? LOOP.map((clipSrc, slot) => (
             <video
               key={slot}
               className="character__idle"
-              src={LOOP[slot]}
+              src={clipSrc}
               muted
               playsInline
-              // The coffee is a megabyte and it is not needed for a good ten
-              // seconds — the greeting, the first idle take and a rest have to
-              // pass first. Preloading it would have it competing with the
-              // greeting for a phone's bandwidth at the worst moment, so its
-              // fetch is kicked off once the first take is running instead.
+              // The coffee is a megabyte and the yawn nearly two, and neither
+              // is wanted for a good ten seconds — the greeting, the first idle
+              // take and a rest have to pass before even the coffee. Preloading
+              // them would have three megabytes competing with the greeting for
+              // a phone's bandwidth at the worst moment, so each take kicks off
+              // the fetch of the one that follows it.
               preload={slot === 0 ? 'auto' : 'none'}
               ref={attachIdle(slot)}
               // The showing layer is opaque under the smile as well as while it
@@ -834,7 +865,7 @@ export function CharacterStage() {
               }}
               onError={() => {
                 if (slot === 0) setIdleBroken(true)
-                else spareDead.current = true
+                else spareDead.current[slot] = true
               }}
             />
           ))
