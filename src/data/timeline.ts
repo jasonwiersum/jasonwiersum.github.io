@@ -166,7 +166,7 @@ export const milestones: Milestone[] = [
     // three years as a gap, and Jason's decision is that the line tells them
     // and the document stays as it is. So the two disagree here ON PURPOSE —
     // do not "fix" it by deleting this point.
-    place: 'La Bodega de Ramón',
+    place: 'La Bodega de Ramón, Nürnberg',
   },
   {
     id: 'admiral',
@@ -205,7 +205,7 @@ export const milestones: Milestone[] = [
       // "cumplimiento normativo" rather than the English word: it is what the
       // term is called in Spanish, and the point is to be understood.
       es: 'Cuadres, control financiero y cumplimiento normativo',
-      en: 'Reconciliation, financial control and compliance',
+      en: 'Reconciliation, controlling and compliance',
       de: 'Abrechnung, Finanzkontrolle und Compliance',
     },
   },
