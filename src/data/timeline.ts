@@ -193,12 +193,20 @@ export const milestones: Milestone[] = [
       en: 'Commercial administrator',
       de: 'Kaufmännischer Angestellter',
     },
-    // CV: 02/2019 - 05/2024, Merkur Casino GmbH, Nürnberg.
+    // CV: 02/2019 - 05/2024, Merkur Casino GmbH, Nürnberg — "Abrechnung,
+    // Finanzkontrolle und Verwaltung komplexer Geldbestände, Schwerpunkt auf
+    // Datengenauigkeit, Nachvollziehbarkeit und Compliance-Standards."
+    //
+    // The line takes the third of those three and not the first. Data accuracy
+    // is what any of these jobs claims; compliance is the one a casino's books
+    // actually turn on, and it is the word Jason wants read here.
     place: 'Merkur Casino GmbH, Nürnberg',
     detail: {
-      es: 'Cuadres, control financiero y precisión del dato',
-      en: 'Reconciliation, financial control and data accuracy',
-      de: 'Abrechnung, Finanzkontrolle und Datengenauigkeit',
+      // "cumplimiento normativo" rather than the English word: it is what the
+      // term is called in Spanish, and the point is to be understood.
+      es: 'Cuadres, control financiero y cumplimiento normativo',
+      en: 'Reconciliation, financial control and compliance',
+      de: 'Abrechnung, Finanzkontrolle und Compliance',
     },
   },
   {
