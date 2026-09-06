@@ -88,6 +88,35 @@
 
 .about__facts-block {
   margin-block-start: clamp(2rem, 5vw, 4rem);
+
+  /* Last in, behind the CV. Same latch as `.about__cv` — the line reaching its
+     final point — with a longer wait on top, which is the whole mechanism:
+     1240ms is the CV's own 520ms plus most of its 820ms fade, so this block
+     starts moving as that one finishes rather than beside it.
+
+     A delay rather than a second latch because the two are one gesture. The
+     line ends, the invitation to read the whole CV arrives, and the figures
+     that sum it up follow — a chain of three, each waiting on the one before,
+     and none of them depending on how fast the page is scrolled. */
+  opacity: 0;
+  transform: translate3d(0, 0.75rem, 0);
+  transition:
+    opacity 820ms var(--ease-out) 1240ms,
+    transform 820ms var(--ease-out) 1240ms;
+}
+
+.about__facts-block[data-shown] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+/* As with the CV: the travel goes, the wait stays. The order is what is being
+   animated here, and it survives the preference. */
+@media (prefers-reduced-motion: reduce) {
+  .about__facts-block {
+    transform: none;
+    transition: opacity 520ms var(--ease-out) 1240ms;
+  }
 }
 
 /* Outside the panel now, so the panel holds nothing but the values. */

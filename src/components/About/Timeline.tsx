@@ -42,11 +42,29 @@ const LEAD = 80
 const FADE = 180
 
 /**
+ * How long the line takes to catch up with the scroll position, as the time
+ * constant of an exponential chase in ms — it covers about 63% of the distance
+ * left in one of these, and effectively all of it in three.
+ *
+ * The line used to be set straight from `scrollY`, which is smooth only if the
+ * scrolling is. A notched mouse wheel does not scroll, it jumps: every click is
+ * an instant 100-odd px, and the fill reproduced each one as a step. Chasing
+ * the value instead of taking it turns those steps into one continuous glide,
+ * because what the eye follows is now the chase and not the input.
+ *
+ * 110ms is the length that smooths the wheel without lagging behind a drag: a
+ * notch is absorbed in a third of a second, which is under the ~400ms gap
+ * between two clicks of a wheel being turned steadily, so the line is never
+ * more than one notch behind the page.
+ */
+const GLIDE = 110
+
+/**
  * The path, as points on one line that draws itself while you scroll.
  *
  * The line is a single element — one faint rail from the first dot to the last,
- * with one accent fill over it whose height is set from the scroll position on
- * every frame. It used to be a segment per point, each scaled from 0 to 1 by a
+ * with one accent fill over it whose height chases the scroll position frame by
+ * frame. It used to be a segment per point, each scaled from 0 to 1 by a
  * CSS transition when that point crossed an IntersectionObserver, and the
  * trouble with that was visible: the segments met at the dots, every dot wore
  * an opaque 3px ring to lift it off the rail, and the result read as nine short
@@ -130,28 +148,37 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
       dots = items.map((item) => item.offsetTop - items[0].offsetTop)
     }
 
+    /** Where the line has drawn to, in px down the rail. Its own value rather
+     *  than a reading of the scroll position, because it chases that position
+     *  instead of taking it — see GLIDE. */
+    let drawn = 0
     let frame = 0
-    const draw = () => {
-      frame = 0
-      const rect = railEl.getBoundingClientRect()
-      const reach =
-        window.innerHeight * (phone ? REACH.phone : REACH.wide) - rect.top
+    let clock = 0
+
+    /** Where the line would be if it kept up with the page exactly. */
+    const target = (railTop: number) =>
+      window.innerHeight * (phone ? REACH.phone : REACH.wide) - railTop
+
+    const render = (railHeight: number) => {
       // Clamped for the fill, unclamped for the points. A point lights when the
-      // reach line has passed it, and the first dot sits at zero — clamping
-      // first would make that comparison true while the whole block was still
-      // below the fold.
-      const drawn = Math.min(Math.max(reach, 0), rect.height)
-      fillEl.style.height = `${drawn}px`
+      // line has passed it, and the first dot sits at zero — clamping first
+      // would make that comparison true while the whole block was still below
+      // the fold.
+      const height = Math.min(Math.max(drawn, 0), railHeight)
+      fillEl.style.height = `${height}px`
       // The grey track's window, following the head of the fill. See the mask
       // in timeline.css: solid to the first number, gone by the second, so what
       // is on screen is a short lead of track below the line rather than the
       // whole path laid out in advance.
-      railEl.style.setProperty('--rail-seen', `${drawn + LEAD}px`)
-      railEl.style.setProperty('--rail-fade', `${drawn + LEAD + FADE}px`)
+      railEl.style.setProperty('--rail-seen', `${height + LEAD}px`)
+      railEl.style.setProperty('--rail-fade', `${height + LEAD + FADE}px`)
+      // Read off the same value the fill is drawn from, so a point cannot light
+      // before the line visibly reaches it — the smoothing carries the cards
+      // with it rather than running ahead of the line.
       setShown((previous) => {
         let changed = false
         const next = dots.map((offset, index) => {
-          const lit = reach >= offset
+          const lit = drawn >= offset
           if (lit !== previous[index]) changed = true
           return lit
         })
@@ -159,29 +186,64 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
       })
     }
 
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(draw)
+    // One frame of the chase: close a share of the remaining distance, where
+    // the share comes from how long this frame actually took. Written as a
+    // decay rather than a fixed fraction per frame so the line settles in the
+    // same third of a second at 60Hz as at 144Hz.
+    const step = (now: number) => {
+      const rect = railEl.getBoundingClientRect()
+      const want = target(rect.top)
+      // A tab in the background hands back one enormous delta on return, and an
+      // uncapped one would close the whole distance in a single frame. Capping
+      // it means the line resumes from where it was.
+      const elapsed = Math.min(now - clock, 64)
+      clock = now
+      drawn += (want - drawn) * (1 - Math.exp(-elapsed / GLIDE))
+      // Close enough is arrived. An exponential never actually gets there, so
+      // without this the loop would run forever on an ever-halving remainder —
+      // and half a pixel of fill is not a thing anyone can see.
+      const settled = Math.abs(want - drawn) < 0.5
+      if (settled) drawn = want
+      render(rect.height)
+      frame = settled ? 0 : requestAnimationFrame(step)
     }
 
-    measure()
-    draw()
+    const onScroll = () => {
+      if (frame) return
+      clock = performance.now()
+      frame = requestAnimationFrame(step)
+    }
+
+    /** Straight to where it belongs, no chase. For the first paint and for
+     *  anything that moves the geometry under the line rather than scrolls it:
+     *  a page loaded halfway down should arrive with the line already drawn,
+     *  not draw itself once. */
+    const snap = () => {
+      const rect = railEl.getBoundingClientRect()
+      drawn = target(rect.top)
+      render(rect.height)
+    }
+
+    const reset = () => {
+      measure()
+      snap()
+    }
+
+    reset()
 
     // Anything that changes the list's height changes where the dots are: a
     // font landing, the language switching to longer headlines, a phone turned
     // on its side. Measure again and redraw from the same scroll position.
-    const resize = new ResizeObserver(() => {
-      measure()
-      draw()
-    })
+    const resize = new ResizeObserver(reset)
     resize.observe(box)
 
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
+    window.addEventListener('resize', reset)
     return () => {
       if (frame) cancelAnimationFrame(frame)
       resize.disconnect()
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
+      window.removeEventListener('resize', reset)
     }
   }, [phone, language])
 
