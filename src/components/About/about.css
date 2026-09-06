@@ -89,33 +89,39 @@
 .about__facts-block {
   margin-block-start: clamp(2rem, 5vw, 4rem);
 
-  /* Last in, behind the CV. Same latch as `.about__cv` — the line reaching its
-     final point — with a longer wait on top, which is the whole mechanism:
-     1240ms is the CV's own 520ms plus most of its 820ms fade, so this block
-     starts moving as that one finishes rather than beside it.
+  /* Exactly as `.about__cv`, which it follows down the page and therefore
+     follows in and out of it. The one addition is the delay, and it is a
+     stagger rather than a queue: 160ms is what `useReveal` puts between two
+     siblings arriving together, so on a fast scroll — where this block and the
+     one above it cross the line within the same breath — they arrive as a pair
+     in order rather than at once.
 
-     A delay rather than a second latch because the two are one gesture. The
-     line ends, the invitation to read the whole CV arrives, and the figures
-     that sum it up follow — a chain of three, each waiting on the one before,
-     and none of them depending on how fast the page is scrolled. */
+     On the shown state, so the exit keeps none of it. Scrolling back up this
+     block reaches the exit line first, being the lower of the two, and a delay
+     here would have spent that head start. */
   opacity: 0;
-  transform: translate3d(0, 0.75rem, 0);
+  transform: translate3d(0, 1.375rem, 0);
   transition:
-    opacity 820ms var(--ease-out) 1240ms,
-    transform 820ms var(--ease-out) 1240ms;
+    opacity 540ms var(--ease-out),
+    transform 540ms var(--ease-out);
 }
 
 .about__facts-block[data-shown] {
   opacity: 1;
   transform: translate3d(0, 0, 0);
+  transition-duration: 900ms;
+  transition-delay: 160ms;
 }
 
-/* As with the CV: the travel goes, the wait stays. The order is what is being
-   animated here, and it survives the preference. */
+/* Travel goes, the cross-fade and the order stay — `motionBudget` caps the
+   hook's own tweens at 450ms under the preference, and these two follow it. */
 @media (prefers-reduced-motion: reduce) {
-  .about__facts-block {
+  .about__cv,
+  .about__cv[data-shown],
+  .about__facts-block,
+  .about__facts-block[data-shown] {
     transform: none;
-    transition: opacity 520ms var(--ease-out) 1240ms;
+    transition-duration: 450ms;
   }
 }
 
@@ -203,33 +209,28 @@
      paragraph declares its own `text-align`, so this reaches nothing else. */
   text-align: center;
 
-  /* It waits for the line above it to reach its last point, and then some.
-     `data-shown` is set from About, which gets it from Timeline; the delay on
-     top is so the two do not arrive together — the final point's own card is
-     820ms, so a 520ms head start means the CV starts moving while that card is
-     still settling and lands well after it.
+  /* Written from the hidden side, which is also the leaving side: 22px down
+     and transparent is where this block starts and where it goes back to, the
+     same figure `useReveal` uses for everything that carries `data-reveal`.
+     `data-shown` comes from About, which crosses the shared lines through
+     `useRevealed`.
 
-     Same shape as a timeline card on purpose: this is the block the line hands
-     over to, so it should arrive the way the points did. */
+     The duration lives on the two states rather than in one declaration, so
+     coming and going are not the same length — 900ms in, 540ms out, again the
+     hook's own ratio. And because the delay below sits on the shown state, it
+     applies to arriving only: removing the attribute drops back to this rule,
+     which has none, so nothing lingers on its way out. */
   opacity: 0;
-  transform: translate3d(0, 0.75rem, 0);
+  transform: translate3d(0, 1.375rem, 0);
   transition:
-    opacity 820ms var(--ease-out) 520ms,
-    transform 820ms var(--ease-out) 520ms;
+    opacity 540ms var(--ease-out),
+    transform 540ms var(--ease-out);
 }
 
 .about__cv[data-shown] {
   opacity: 1;
   transform: translate3d(0, 0, 0);
-}
-
-/* Travel goes, the cross-fade and the wait stay — the ordering is the point
-   here, and a block that simply appeared would lose it. */
-@media (prefers-reduced-motion: reduce) {
-  .about__cv {
-    transform: none;
-    transition: opacity 520ms var(--ease-out) 520ms;
-  }
+  transition-duration: 900ms;
 }
 
 /* Following the line rather than the prose, it needs the room the line's own
