@@ -469,3 +469,20 @@
   margin-block-start: var(--space-5);
   text-wrap: balance;
 }
+
+/* Dark only: the section's own prose and the line it lands on go up to the
+   white the headings use, rather than the muted grey the rest of the page's
+   body copy sits at.
+
+   Not a token change, because --muted is right where it is: it carries the
+   project descriptions, the section leads and the nav, and moving it would
+   take the whole page's second voice up with it. This is these five
+   paragraphs, which are the ones being read closely and the ones asked about.
+
+   Light is untouched. --muted there is #4b5468, which is already 8.9:1 on the
+   sheet — the problem was only ever the dark theme, where the sheet is
+   translucent and the ground under the text is the gradient. */
+[data-theme='dark'] .about__prose p,
+[data-theme='dark'] .about__tagline {
+  color: var(--foreground);
+}
