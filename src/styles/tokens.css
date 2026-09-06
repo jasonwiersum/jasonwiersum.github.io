@@ -117,11 +117,6 @@
   /* The floating sheet. Its own token rather than --surface because --surface
      is used by every card on the page. */
   --sheet-surface: rgba(255, 255, 255, 0.72);
-  /* On a phone the sheet paints nothing and this veil, on the fixed backdrop,
-     stands in for it — see globals.css. 0.9 left the screen looking plain
-     white with the blue barely there; at 0.8, with the phone's scrim gone, a
-     fifth of the gradient comes through instead of the twelfth it did. */
-  --backdrop-veil-phone: rgba(255, 255, 255, 0.8);
 
   --border: rgba(15, 20, 36, 0.12);
   --border-strong: rgba(15, 20, 36, 0.22);
@@ -282,10 +277,6 @@
   --surface-glass-strong: rgba(24, 26, 35, 0.73);
   --surface-sunken: rgba(255, 255, 255, 0.04);
   --sheet-surface: rgba(255, 255, 255, 0.05);
-  /* Not a white veil — that would be a light sheet. The dark theme's own solid
-     surface. Down from 0.9: dark read better than light to begin with, so this
-     one only needed easing. */
-  --backdrop-veil-phone: rgba(20, 22, 30, 0.86);
 
   --border: rgba(255, 255, 255, 0.1);
   --border-strong: rgba(255, 255, 255, 0.2);
