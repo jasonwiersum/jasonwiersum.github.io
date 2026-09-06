@@ -172,6 +172,18 @@
   margin-block-start: var(--space-5);
 }
 
+/* Following the line rather than the prose, it needs the room the line's own
+   heading gets above it. `--space-5` was measured against a paragraph ending a
+   couple of centimetres higher; after a 1300px timeline the same 24px read as
+   the CV having been left in the last point's lap.
+
+   Written as "when it follows the line" rather than raised on `.about__cv`
+   itself, so moving the block back into the text column takes its old spacing
+   with it. */
+.timeline + .about__cv {
+  margin-block-start: clamp(2rem, 5vw, 3.5rem);
+}
+
 /* Same treatment as the prose above it: it is the last paragraph of the same
    column and 40rem wide like the rest, so a ragged edge here would be the one
    line that does not line up. */
