@@ -67,7 +67,7 @@ const FADE = 180
  * dot is a spring. React is asked to re-render only when that set of booleans
  * actually changes, not on every frame of scrolling.
  */
-export function Timeline() {
+export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void }) {
   const { t, language } = useLanguage()
   const wrap = useRef<HTMLDivElement>(null)
   const rail = useRef<HTMLSpanElement>(null)
@@ -81,6 +81,24 @@ export function Timeline() {
   const [phone, setPhone] = useState(
     () => typeof window !== 'undefined' && window.matchMedia(PHONE).matches,
   )
+
+  /**
+   * The line reaching its end, reported upwards.
+   *
+   * What follows the timeline on the page is the CV block, and it used to
+   * appear before the last point did — `useReveal` brings a block in when its
+   * top crosses 90% of the viewport, while a point lights at 60%, and the CV
+   * sits only ~200px below the final dot. So the invitation to read the whole
+   * history arrived while the history was still being drawn.
+   *
+   * Passing the fact up rather than having About watch the DOM: the component
+   * that decides when a point is lit is the only one that can say so without
+   * a second copy of that arithmetic.
+   */
+  const last = shown[shown.length - 1] ?? false
+  useEffect(() => {
+    onComplete?.(last)
+  }, [last, onComplete])
 
   useEffect(() => {
     const media = window.matchMedia(PHONE)
