@@ -4,10 +4,12 @@
  * ships components as source to copy, and `ogl` was already a dependency here.
  *
  * Kept close to upstream so it stays easy to diff against a newer version.
- * The only changes are the stylesheet's name, to match this repo's casing,
- * and a `paused` prop for `prefers-reduced-motion`: the page has one
- * everywhere else, and a gradient that never stops moving is exactly what
- * that preference is about. Paused still paints — one frame, held.
+ * Three changes: the stylesheet's name, to match this repo's casing; a
+ * `paused` prop for `prefers-reduced-motion`, since the page has one
+ * everywhere else and a gradient that never stops moving is exactly what that
+ * preference is about (paused still paints — one frame, held); and a pointer
+ * reaction, borrowing `mouseRadius` and its falloff verbatim from React Bits'
+ * own Dither so the two behave the same way at the same number.
  */
 import React, { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
@@ -40,6 +42,9 @@ interface GrainientProps {
   className?: string;
   /** Hold the current frame instead of animating. */
   paused?: boolean;
+  enableMouseInteraction?: boolean;
+  /** Reach of the pointer, in aspect-corrected screen halves. */
+  mouseRadius?: number;
 }
 
 const hexToRgb = (hex: string): [number, number, number] => {
@@ -77,6 +82,9 @@ uniform float uGamma;
 uniform float uSaturation;
 uniform vec2 uCenterOffset;
 uniform float uZoom;
+uniform vec2 uMouse;
+uniform float uMouseRadius;
+uniform float uMouseStrength;
 uniform vec3 uColor1;
 uniform vec3 uColor2;
 uniform vec3 uColor3;
@@ -105,13 +113,38 @@ void mainImage(out vec4 o, vec2 C){
   tuv.x+=sin(tuv.y*frequency+warpTime)/amplitude;
   tuv.y+=sin(tuv.x*(frequency*1.5)+warpTime)/(amplitude*0.5);
 
+  // The pointer, in the same aspect-corrected space Dither measures in: both
+  // centred on the screen, both with x stretched by the ratio, so the reach a
+  // given uMouseRadius buys is the same in either component.
+  //
+  // The y flip is Dither's, and it is load-bearing: the pointer is measured
+  // from the top of the page and gl_FragCoord counts from the bottom. Without
+  // it the swell lands in the mirror image of the cursor — measured with the
+  // drift frozen, a pointer at y=250 put the effect at y=569 and one at y=650
+  // put it at y=298, while x landed correctly every time.
+  float mouseEffect=0.0;
+  if(uMouseStrength>0.0&&uMouseRadius>0.0){
+    vec2 m=(uMouse/iResolution.xy-0.5)*vec2(1.0,-1.0);
+    m.x*=ratio;
+    vec2 q=uv-0.5;
+    q.x*=ratio;
+    vec2 toPointer=q-m;
+    float dist=length(toPointer);
+    mouseEffect=(1.0-S(0.0,uMouseRadius,dist))*uMouseStrength;
+    // Two halves, because either alone reads as the wrong thing: pushing the
+    // pattern outward alone is a lens with no colour to it, and pulling the
+    // blend alone is a spotlight that does not move. Together the gradient
+    // swells around the pointer and darkens toward the accent as it goes.
+    tuv+=normalize(toPointer+vec2(1e-5))*mouseEffect*0.09;
+  }
+
   vec3 colLav=uColor1;
   vec3 colOrg=uColor2;
   vec3 colDark=uColor3;
   float b=uColorBalance;
   float s=max(uBlendSoftness,0.0);
   mat2 blendRot=Rot(radians(uBlendAngle));
-  float blendX=(tuv*blendRot).x;
+  float blendX=(tuv*blendRot).x-mouseEffect*0.28;
   float edge0=-0.3-b-s;
   float edge1=0.2-b+s;
   float v0=0.5-b+s;
@@ -182,13 +215,20 @@ const Grainient: React.FC<GrainientProps> = ({
   color3 = '#B497CF',
   lightMode = false,
   className = '',
-  paused = false
+  paused = false,
+  enableMouseInteraction = false,
+  mouseRadius = 0.5
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   // Read inside the render loop, which is built once and never rebuilt, so the
   // flag has to reach it through a ref rather than a dependency.
   const pausedRef = useRef(paused);
   const controls = useRef<{ start: () => void; stop: () => void } | null>(null);
+  // Where the pointer is, where the shader currently thinks it is, and how much
+  // of the effect is faded in. All three are read inside the render loop, which
+  // is built once, so they travel by ref rather than as dependencies.
+  const pointer = useRef({ targetX: 0, targetY: 0, x: 0, y: 0, target: 0, strength: 0, seen: false });
+  const mouseOn = useRef(enableMouseInteraction);
 
   // Effect 1: build WebGL context once, pause when offscreen / tab hidden
   useEffect(() => {
@@ -234,6 +274,9 @@ const Grainient: React.FC<GrainientProps> = ({
         uSaturation:     { value: 1.0 },
         uCenterOffset:   { value: new Float32Array([0, 0]) },
         uZoom:           { value: 0.9 },
+        uMouse:          { value: new Float32Array([0, 0]) },
+        uMouseRadius:    { value: 0.0 },
+        uMouseStrength:  { value: 0.0 },
         uColor1:         { value: new Float32Array([1, 1, 1]) },
         uColor2:         { value: new Float32Array([1, 1, 1]) },
         uColor3:         { value: new Float32Array([1, 1, 1]) },
@@ -264,8 +307,42 @@ const Grainient: React.FC<GrainientProps> = ({
     let isPageVisible = !document.hidden;
     const t0 = performance.now();
 
+    // The canvas never receives these itself: the backdrop is pointer-events:
+    // none and the page sits on top of it, so the window is the only place the
+    // whole travel is visible. Coordinates are turned into drawing-buffer
+    // pixels because that is the space the shader compares against.
+    const onPointerMove = (event: PointerEvent) => {
+      if (!mouseOn.current) return;
+      const rect = container.getBoundingClientRect();
+      const scaleX = gl.drawingBufferWidth / Math.max(rect.width, 1);
+      const scaleY = gl.drawingBufferHeight / Math.max(rect.height, 1);
+      const p = pointer.current;
+      p.targetX = (event.clientX - rect.left) * scaleX;
+      p.targetY = (event.clientY - rect.top) * scaleY;
+      p.target = 1;
+      // The first sighting jumps rather than eases: easing in from the corner
+      // drags a visible bulge across the page before it reaches the cursor.
+      if (!p.seen) { p.x = p.targetX; p.y = p.targetY; p.seen = true; }
+    };
+    const onPointerLeave = () => { pointer.current.target = 0; };
+
+    if (window.matchMedia('(pointer: fine)').matches) {
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      document.addEventListener('pointerleave', onPointerLeave);
+    }
+
     const loop = (t: number) => {
       (program.uniforms.iTime as { value: number }).value = (t - t0) * 0.001;
+      // Eased, not followed: the raw position makes the swell snap from frame
+      // to frame on a fast flick, and the whole point of it is to feel soft.
+      const p = pointer.current;
+      p.x += (p.targetX - p.x) * 0.08;
+      p.y += (p.targetY - p.y) * 0.08;
+      p.strength += (p.target - p.strength) * 0.05;
+      const m = (program.uniforms.uMouse as { value: Float32Array }).value;
+      m[0] = p.x;
+      m[1] = p.y;
+      (program.uniforms.uMouseStrength as { value: number }).value = mouseOn.current ? p.strength : 0;
       renderer.render({ scene: mesh });
       raf = requestAnimationFrame(loop);
     };
@@ -297,6 +374,8 @@ const Grainient: React.FC<GrainientProps> = ({
       ro.disconnect();
       io.disconnect();
       document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('pointermove', onPointerMove);
+      document.removeEventListener('pointerleave', onPointerLeave);
       controls.current = null;
       ctxMap.delete(container);
       try { container.removeChild(canvas); } catch { /* ignore */ }
@@ -339,6 +418,8 @@ const Grainient: React.FC<GrainientProps> = ({
     u.uSaturation.value     = saturation;
     u.uCenterOffset.value   = new Float32Array([centerX, centerY]);
     u.uZoom.value           = zoom;
+    u.uMouseRadius.value    = mouseRadius;
+    mouseOn.current         = enableMouseInteraction;
     u.uColor1.value         = new Float32Array(hexToRgb(color1));
     u.uColor2.value         = new Float32Array(hexToRgb(color2));
     u.uColor3.value         = new Float32Array(hexToRgb(color3));
@@ -347,7 +428,8 @@ const Grainient: React.FC<GrainientProps> = ({
     timeSpeed, colorBalance, warpStrength, warpFrequency, warpSpeed,
     warpAmplitude, blendAngle, blendSoftness, rotationAmount, noiseScale,
     grainAmount, grainScale, grainAnimated, contrast, gamma, saturation,
-    centerX, centerY, zoom, color1, color2, color3, lightMode
+    centerX, centerY, zoom, color1, color2, color3, lightMode,
+    enableMouseInteraction, mouseRadius
   ]);
 
 

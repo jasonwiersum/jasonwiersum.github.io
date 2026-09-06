@@ -348,25 +348,28 @@ p {
 }
 
 /* Page content sits above the fixed ambience layer. */
-.page {
+/* The whole reading column — the page and the footer under it — as one sheet
+   lifted off the backdrop, so the gradient behind it reads as
+   something the content floats over rather than something printed behind it.
+   Translucent, not solid: the gradient still moves underneath, tinted.
+
+   Exactly `--container` wide and with no padding of its own — `.container`
+   inside already reserves a gutter on each side, so the sheet lands on the line
+   the content was already stopping at and nothing inside it gets narrower. What
+   the page gives up is the empty margin outside that line, which is where the
+   gradient now shows.
+
+   No `backdrop-filter` on purpose. The sheet is as tall as the document and the
+   shader repaints under it every frame, so a blur would be recomputed over the
+   whole thing continuously — the one part of this a phone would feel. The
+   translucency alone gives the same read.
+
+   It also carries the contrast. Body copy sitting straight on the gradient
+   measured 3.19:1 against the accent end of it, under AA and under the 5.89:1
+   the flat background used to give; on the sheet it comes back to 6.08:1. */
+.sheet {
   position: relative;
   z-index: var(--z-content);
-}
-
-/* The page as one sheet lifted off the backdrop, so the gradient reads as
-   something the content is floating over rather than something printed behind
-   it. Translucent, not solid: the gradient still moves underneath, tinted.
-
-   No `backdrop-filter` here on purpose. The sheet is as tall as the document
-   and the shader repaints under it every frame, so a blur would be recomputed
-   over the whole thing continuously — the one part of this that a phone would
-   feel. The translucency alone gives the same read. */
-.page--sheet {
-  /* Exactly `--container` wide, and no padding of its own: `.container` inside
-     already reserves a gutter on each side, so the sheet lands on the line the
-     content was already stopping at and nothing inside it gets narrower. What
-     the page gives up is the empty margin outside that line, which is where the
-     gradient now shows. */
   max-width: min(var(--container), calc(100% - 2 * var(--space-6)));
   margin-inline: auto;
   margin-block: var(--space-6);
@@ -374,14 +377,25 @@ p {
   border-radius: var(--radius-xl);
   background: var(--surface);
   box-shadow: var(--shadow-lg);
+  /* The footer's rule and the hero's corners have to stop at the sheet's own,
+     or they run out past the rounding. */
+  overflow: hidden;
+}
+
+.page {
+  position: relative;
 }
 
 /* Edge to edge on a phone: an inset sheet there costs the content the little
    width it has, and the shadow has nowhere to fall. */
 @media (max-width: 48rem) {
-  .page--sheet {
+  .sheet {
+    /* max-width too, not only the frame: the inset above is a percentage, so
+       resetting the border and the radius alone left the sheet floating in a
+       32px channel of gradient with square corners, which is the worst of
+       both. */
+    max-width: none;
     margin-block: 0;
-    padding-inline: 0;
     border-inline: 0;
     border-radius: 0;
   }

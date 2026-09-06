@@ -47,23 +47,27 @@ export default function App() {
       <FloatingNavigation activeSection={activeSection} onSelect={goToSection} />
       <SettingsIsland />
 
-      <main id="main" className="page" ref={mainRef}>
-        <Hero />
+      {/* Everything that is read sits on one sheet, the footer included: the
+          gradient behind it shows in the margin, and the content floats. */}
+      <div className="sheet">
+        <main id="main" className="page" ref={mainRef}>
+          <Hero />
 
-        {/* Work is what he does: the output first, the tools underneath it. */}
-        <section id="work" className="section">
-          <Projects />
-          <Skills />
-        </section>
+          {/* Work is what he does: the output first, the tools underneath it. */}
+          <section id="work" className="section">
+            <Projects />
+            <Skills />
+          </section>
 
-        <section id="about" className="section">
-          <About />
-        </section>
+          <section id="about" className="section">
+            <About />
+          </section>
 
-        <Contact />
-      </main>
+          <Contact />
+        </main>
 
-      <Footer />
+        <Footer />
+      </div>
     </>
   )
 }

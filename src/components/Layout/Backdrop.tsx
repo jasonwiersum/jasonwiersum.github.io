@@ -12,17 +12,25 @@ import './backdrop.css'
  * render that instead of this and the old look is back, nothing else needs
  * touching.
  *
+ * It reacts to the pointer: the gradient swells around it and leans toward the
+ * accent within half a screen, and follows on a delay rather than tracking it
+ * exactly. Not under `prefers-reduced-motion` — the whole thing is held on one
+ * frame there, and a backdrop that answers the mouse is still motion.
+ *
  * The palette is the site's own. In light it runs from the page background up
  * to the accent, with the lighter accent as the tone between them; in dark it
  * runs from the near-black background to the accent that theme already uses,
  * which keeps the same three-step shape without lighting the page up.
  */
 
-/* Light: --background, the dark theme's --accent as the middle tone, --accent.
-   Dark: --background, --accent, and --background-elevated to keep the darkest
-   corner from going flat black. Written out rather than read from the custom
-   properties because the shader wants numbers, and a colour that has to be
-   parsed out of a computed style at mount is a colour that can arrive late. */
+/* Light: --background, --accent, and the dark theme's --accent between them.
+   Dark keeps the last two and swaps the first for --background-elevated, which
+   is a step off flat black — the true --background there left the quiet corner
+   looking like a hole rather than a dark end of the gradient.
+
+   Written out rather than read from the custom properties because the shader
+   wants numbers, and a colour that has to be parsed out of a computed style at
+   mount is a colour that can arrive late. */
 const PALETTE = {
   light: { color1: '#d6e3ff', color2: '#0038ff', color3: '#5b84ff' },
   dark: { color1: '#111219', color2: '#0038ff', color3: '#5b84ff' },
@@ -58,6 +66,8 @@ export function Backdrop() {
         centerX={0}
         centerY={0}
         zoom={0.9}
+        enableMouseInteraction
+        mouseRadius={0.5}
         paused={reducedMotion}
       />
       <div className="backdrop__scrim" />
