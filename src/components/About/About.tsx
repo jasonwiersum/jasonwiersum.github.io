@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { SITE } from '../../config/site'
 import { useLanguage } from '../../hooks/useLanguage'
 import { useReveal } from '../../hooks/useReveal'
+import { useRevealed } from '../../hooks/useRevealed'
 import { CvDialog } from './CvDialog'
 import { Timeline } from './Timeline'
 import './about.css'
@@ -18,6 +19,9 @@ import './about.css'
  */
 function Cv({ ready }: { ready: boolean }) {
   const { t } = useLanguage()
+  /** On the same lines as everything else on the page, but not until the line
+   *  above it has finished — see `useRevealed`. */
+  const [box, shown] = useRevealed(ready)
   const [available, setAvailable] = useState(false)
   const [origin, setOrigin] = useState<DOMRect | null>(null)
   const [open, setOpen] = useState(false)
@@ -42,12 +46,12 @@ function Cv({ ready }: { ready: boolean }) {
   if (!available) return null
 
   return (
-    /* `data-shown` rather than `data-reveal`: this block is not brought in by
-       its own position on the screen but by the timeline above it reaching its
-       last point — see about.css and the note in Timeline.tsx. Leaving
-       `data-reveal` on as well would put useReveal's opacity in a fight with
-       the CSS transition. */
-    <div className="about__cv" data-shown={ready || undefined}>
+    /* `data-shown` rather than `data-reveal`, because this block has a
+       condition on it that a plain reveal cannot carry — but the position it
+       answers to is the same one, so it comes and goes with its neighbours
+       instead of on a clock of its own. Leaving `data-reveal` on as well would
+       put useReveal's opacity in a fight with the CSS transition. */
+    <div className="about__cv" ref={box} data-shown={shown || undefined}>
       <p className="about__cv-intro">{t.about.cvIntro}</p>
 
       <div className="about__cv-actions">
@@ -111,8 +115,15 @@ export function About() {
   useReveal(root)
   /** Whether the line has reached the point it ends on. Everything below the
    *  line waits for it, so neither "read the whole history" nor the figures
-   *  summing it up can arrive before the history has finished drawing. */
+   *  summing it up can arrive before the history has finished drawing.
+   *
+   *  It is only ever a condition on arriving. Where the two blocks stand on the
+   *  screen decides everything after that — including the order they leave in,
+   *  which this could not describe: the line loses its last point while both
+   *  are still on screen, and hanging their exits on that would take the pair
+   *  of them out together. */
   const [pathDone, setPathDone] = useState(false)
+  const [factsBox, factsShown] = useRevealed(pathDone)
 
   return (
     <div className="about" ref={root}>
@@ -167,18 +178,21 @@ export function About() {
             sits outside the panel, so the panel holds only the values and can
             centre them.
 
-            On the same latch as the CV above it, not on `data-reveal`, and for
-            the same reason the CV came off it. `useReveal` brings a block in on
-            its own position — the top edge crossing 90% of the viewport — and
-            these two blocks are only a few hundred pixels apart, so the one
-            underneath was reaching its line and finishing a 0.9s fade while the
-            CV was still waiting on the timeline and had not started. Summing up
-            arrived before the thing being summed up.
+            Same treatment as the CV above it, and the order between the two
+            comes from where they sit rather than from any delay. This block is
+            187px lower, so scrolling down it crosses the entrance line second
+            and scrolling up it crosses the exit line first — last in, first
+            out, at any speed and without either of them counting.
 
-            Sharing the latch makes the order structural: both wait for the line
-            to reach its last point and the delays in about.css decide which of
-            them moves first, whatever speed the page is scrolled at. */}
-        <section className="about__facts-block" data-shown={pathDone || undefined}>
+            Delays were what did this before, and they only held while the
+            reader scrolled slowly enough for them: at speed, the contact
+            section below reached its own line before this one's 1240ms had
+            elapsed, and "Reden wir?" arrived ahead of both blocks. */}
+        <section
+          className="about__facts-block"
+          ref={factsBox}
+          data-shown={factsShown || undefined}
+        >
           <h3 className="about__facts-title">{t.about.factsTitle}</h3>
           <div className="about__facts card">
             <dl className="about__facts-list">

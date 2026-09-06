@@ -6,6 +6,33 @@ import { motionBudget } from './usePrefersReducedMotion'
 gsap.registerPlugin(useGSAP)
 
 /**
+ * The two lines every entrance and exit on the page is measured against, as
+ * `rootMargin` strings — shared so that anything not driven by this hook can
+ * cross the same lines rather than guess at them (see `useRevealed`).
+ *
+ * Read them as positions down the viewport. `show` ends 25% up from the bottom,
+ * so an element appears once its top has risen past 75% of the screen. `hide`
+ * ends 10% up, so it leaves once its top sinks back past 90%.
+ *
+ * Both used to sit further down — appearing at 90% and leaving at 115%, which
+ * is off the bottom of the screen entirely. That made the exit invisible: an
+ * element scrolled back up slid off the edge at full opacity and was simply
+ * gone. The exit now begins with the last tenth of the screen still holding it,
+ * so blocks fade down out of the bottom the way they faded up into it.
+ *
+ * The gap between the lines is the point of having two. It is 15% of the
+ * viewport — 135px on a laptop — and inside it nothing changes at all, so
+ * someone parked on the boundary cannot flicker an element in and out. Moving
+ * the exit line up meant moving the entrance line up with it to keep that gap;
+ * 75% is also late enough that a block below the timeline cannot arrive before
+ * the line has drawn to its last point, which is the order the section needs.
+ */
+export const REVEAL_BAND = {
+  show: '0px 0px -25% 0px',
+  hide: '15% 0px -10% 0px',
+} as const
+
+/**
  * Scroll-linked entrance and exit for a section.
  *
  * Any descendant carrying `data-reveal` fades and lifts into place as it comes
@@ -119,7 +146,7 @@ export function useReveal(
           }
           if (queued) schedule()
         },
-        { rootMargin: '0px 0px -10% 0px', threshold: 0.01 },
+        { rootMargin: REVEAL_BAND.show, threshold: 0.01 },
       )
 
       // Outer box: it only disappears once it is clear of the viewport, well
@@ -137,7 +164,7 @@ export function useReveal(
           }
           if (queued) schedule()
         },
-        { rootMargin: '15% 0px 15% 0px', threshold: 0 },
+        { rootMargin: REVEAL_BAND.hide, threshold: 0 },
       )
 
       targets.forEach((target) => {
@@ -145,10 +172,51 @@ export function useReveal(
         hide.observe(target)
       })
 
+      // The floor of the document, where the entrance line stops working.
+      //
+      // An element in the last screenful can sit below that line with no way of
+      // rising above it — there is no more page to scroll — and would stay at
+      // opacity 0 for good. Raising the line to 75% brought this within reach
+      // of the real page: the deepest element measures 73% of the viewport on a
+      // 1440px-tall window, which is four percent of clearance.
+      //
+      // So the rule is that the bottom of the document reveals what is left.
+      // It is a floor and not a second entrance: it only ever brings elements
+      // in, only where the page has run out, and skips everything already here.
+      let sweep = 0
+      const atEnd = () => {
+        const page = document.documentElement
+        return window.scrollY + window.innerHeight >= page.scrollHeight - 2
+      }
+      const onScroll = () => {
+        if (sweep) return
+        sweep = requestAnimationFrame(() => {
+          sweep = 0
+          if (!atEnd()) return
+          let queued = false
+          for (const target of targets) {
+            if (gsap.getProperty(target, 'opacity') === 1) continue
+            const rect = target.getBoundingClientRect()
+            if (rect.bottom <= 0 || rect.top >= window.innerHeight) continue
+            entering.push(target)
+            queued = true
+          }
+          if (queued) schedule()
+        })
+      }
+      // Once up front too: a page short enough to arrive already at its end
+      // never fires a scroll event to ask.
+      onScroll()
+      window.addEventListener('scroll', onScroll, { passive: true })
+      window.addEventListener('resize', onScroll)
+
       return () => {
         show.disconnect()
         hide.disconnect()
         clearTimeout(flush)
+        if (sweep) cancelAnimationFrame(sweep)
+        window.removeEventListener('scroll', onScroll)
+        window.removeEventListener('resize', onScroll)
       }
     },
     { scope, dependencies: [stagger, y, duration] },
