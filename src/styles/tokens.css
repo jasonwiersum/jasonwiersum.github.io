@@ -284,11 +284,18 @@
   --muted: #b1b3be;
   --muted-strong: #c3c6d2;
   --faint: #a0a2ab;
-  /* Lighter than --faint, which measured 3.5:1 against the dark field and read
-     as disabled rather than as a prompt. Not as far as --muted: at 6.4:1 it
-     stops looking like a placeholder and starts looking like a filled-in
-     value. This lands between them, near 5:1. */
-  --placeholder: #868a99;
+  /* The same white the typed value is, which is a reversal of what this used to
+     say — it sat near 5:1 on the argument that a brighter prompt would be
+     mistaken for a filled-in field.
+
+     That argument does not hold for this form, because these are not prompts.
+     ContactForm has no visible <label>: the field's name IS its placeholder,
+     with the real label visually hidden for screen readers. So what was being
+     held back at half strength was the only thing on screen telling you which
+     box is which — and the moment you type, it is gone, so there is no state
+     where a value and a placeholder are on screen together to be confused.
+     Full weight, and 13.8:1 against the field it sits in. */
+  --placeholder: #eceef3;
 
   --surface: rgba(255, 255, 255, 0.05);
   --surface-solid: #14161e;
