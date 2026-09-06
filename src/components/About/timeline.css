@@ -1,0 +1,315 @@
+/* ===========================================================================
+   The path — points on a line that draws itself while you scroll
+   ---------------------------------------------------------------------------
+   Every value here comes from tokens.css. The one thing this file owns is the
+   geometry of the rail, which is held in three custom properties so the wide
+   layout and the narrow one differ by where the rail sits and nothing else.
+   =========================================================================== */
+
+.timeline {
+  /* Where the rail runs, as a position across the block. 50% centres it and
+     the points alternate around it; the narrow layout moves it to the left
+     and everything follows. */
+  --rail: 50%;
+  /* How far down a point the dot sits. Lines up with the middle of the period
+     line above the headline, so the dot reads as belonging to that year. */
+  --dot-y: 0.72rem;
+  --dot: 0.75rem;
+  --rail-w: 2px;
+  /* The channel kept clear either side of the rail, so a card never runs up
+     against its own dot. */
+  --gutter: clamp(1.75rem, 4vw, 3.25rem);
+
+  margin-block-start: clamp(2.5rem, 6vw, 4.5rem);
+}
+
+/* Matches the facts panel's heading exactly — same face, size, tracking and
+   colour — because the two are peers: one labels a table of values, this one
+   labels a list of dates. */
+.timeline__title {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-block-end: clamp(1.75rem, 4vw, 2.75rem);
+}
+
+.timeline__list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The track the drawn line travels along, faint and always there — without it
+   the line would appear to be creating the rail rather than moving down one
+   that already exists.
+
+   Same geometry as the drawn segment below, and it is placed per point for the
+   same reason the segment is: the list box runs to the bottom of the last
+   CARD, so one track behind the whole list overshot the last dot by the height
+   of its text. */
+.timeline__track {
+  position: absolute;
+  left: var(--rail);
+  top: var(--dot-y);
+  height: calc(100% - var(--dot-y));
+  width: var(--rail-w);
+  transform: translateX(-50%);
+  background: var(--border);
+  border-radius: var(--radius-pill);
+}
+
+.timeline__item {
+  position: relative;
+  display: grid;
+  /* left cell | the rail's channel | right cell. The rail is the middle
+     column's centre, which is what keeps the dot on it without a magic
+     number: the channel is `--gutter` wide either side. */
+  grid-template-columns:
+    minmax(0, 1fr)
+    calc(var(--gutter) * 2)
+    minmax(0, 1fr);
+  padding-block-end: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.timeline__item:last-child {
+  padding-block-end: 0;
+}
+
+/* The drawn segment: this point's share of the rail, from its own dot down to
+   the next one. It scales from the top, so the line grows downwards into the
+   point below — the direction the reader is travelling.
+
+   One segment per point rather than a single bar scaled against scroll
+   position: the scroll position of this section is already being scrubbed by
+   useSectionTransitions, and a second thing reading it would have to agree
+   with the first. A segment per point needs no scroll position at all. */
+.timeline__item::before {
+  content: '';
+  position: absolute;
+  left: var(--rail);
+  top: var(--dot-y);
+  height: calc(100% - var(--dot-y));
+  width: var(--rail-w);
+  transform: translateX(-50%) scaleY(0);
+  transform-origin: top center;
+  /* Solid, not a gradient. Fading each segment towards its own foot looked
+     like a comet on one point and like a dashed rail on eight: every segment
+     arrived at the next dot at 35% and started again at full, so the line read
+     as broken between points rather than as one line reaching them. */
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+  transition: transform 620ms var(--ease-out) 160ms;
+}
+
+.timeline__item:last-child::before {
+  content: none;
+}
+
+/* The dot. Scaled from nothing on a spring, with the accent ring around it
+   opening at the same time — see the box-shadow below, which is two rings and
+   not a glow: a blur here would smear over the rail it sits on. */
+.timeline__item::after {
+  content: '';
+  position: absolute;
+  left: var(--rail);
+  top: var(--dot-y);
+  width: var(--dot);
+  height: var(--dot);
+  transform: translate(-50%, -50%) scale(0);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--background-elevated), 0 0 0 5px var(--accent-soft);
+  transition: transform 520ms var(--ease-spring);
+}
+
+/* The two ends of the line are drawn heavier — the point you start from and
+   the one you are at now. Hollow rather than bigger: a larger filled dot at
+   this size just reads as a rendering error next to its neighbours. */
+.timeline__item[data-emphasis]::after {
+  width: calc(var(--dot) * 1.34);
+  height: calc(var(--dot) * 1.34);
+  background: var(--background-elevated);
+  border: 3px solid var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+/* Where a point travels in from, as a custom property rather than a second
+   transform.
+
+   Writing the right-hand side's transform out again put a rule of the same
+   specificity as `[data-shown]`'s reset later in the file, and on the narrow
+   layout — where it is written a third time — that rule won: right-hand points
+   arrived and then stayed 20px off, indented past their neighbours. One
+   property, set per side and per breakpoint, cannot drift like that, because
+   only one rule ever declares `transform`. */
+.timeline__card {
+  /* Column 1 or 3, never the middle: the middle is the rail's channel. */
+  grid-column: 1;
+  --from-x: -2rem;
+  opacity: 0;
+  /* Away from the rail, so a point arrives from its own side. The `y` is
+     small and shared, so the two sides still read as one sequence rather than
+     two columns doing separate things. */
+  transform: translate3d(var(--from-x), 0.75rem, 0);
+  transition:
+    opacity 620ms var(--ease-out) 220ms,
+    transform 620ms var(--ease-out) 220ms;
+}
+
+.timeline__item[data-side='right'] .timeline__card {
+  grid-column: 3;
+  --from-x: 2rem;
+}
+
+/* Right-aligned into the rail on the left-hand side, so both columns of text
+   run up to the line rather than away from it. */
+.timeline__item[data-side='left'] .timeline__card {
+  text-align: right;
+}
+
+.timeline__item[data-shown] .timeline__card {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.timeline__item[data-shown]::before {
+  transform: translateX(-50%) scaleY(1);
+}
+
+.timeline__item[data-shown]::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.timeline__period {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent);
+  margin-block-end: var(--space-2);
+}
+
+.timeline__label {
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-weight: 560;
+  letter-spacing: var(--tracking-snug);
+  line-height: var(--leading-snug);
+  color: var(--foreground);
+  margin: 0;
+  /* Long headlines — the engineering degree's full name — should not run the
+     whole half-width and leave the short ones looking stranded. */
+  max-width: 22rem;
+}
+
+.timeline__item[data-side='left'] .timeline__label,
+.timeline__item[data-side='left'] .timeline__detail {
+  margin-inline-start: auto;
+}
+
+.timeline__place {
+  margin-block-start: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--muted-strong);
+}
+
+.timeline__detail {
+  margin-block-start: var(--space-1);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  /* --muted, not --faint. On a phone the sheet paints nothing and this sits on
+     the wash, whose middle is the most saturated part of it — the same reason
+     the wash's own contrast is measured rather than chosen. */
+  color: var(--muted);
+  max-width: 22rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Narrow: the rail moves to the left edge and every point stacks to the right
+   of it.
+
+   Alternating needs two readable columns, and below this there are not two.
+   Kept at 48rem, the same line the sheet goes edge-to-edge on, so the layout
+   changes once rather than twice on the way down.
+   --------------------------------------------------------------------------- */
+@media (max-width: 48rem) {
+  .timeline {
+    /* Half the emphasised dot's width, so the widest dot on the line starts at
+       the block's edge instead of half a dot outside it. */
+    --rail: 0.5rem;
+    --gutter: 1.25rem;
+  }
+
+  .timeline__item {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline-start: calc(var(--gutter) * 1.65);
+  }
+
+  /* Both sides collapse onto the same one, arriving from the rail. The
+     `data-side` attribute stays in the markup — it costs nothing and the wide
+     layout still reads it. */
+  .timeline__card,
+  .timeline__item[data-side='right'] .timeline__card {
+    grid-column: 1;
+    text-align: left;
+    --from-x: 1.25rem;
+  }
+
+  .timeline__item[data-side='left'] .timeline__label,
+  .timeline__item[data-side='left'] .timeline__detail {
+    margin-inline-start: 0;
+  }
+
+  .timeline__item[data-side='left'] .timeline__card {
+    text-align: left;
+  }
+
+  .timeline__label,
+  .timeline__detail {
+    max-width: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Reduced motion.
+
+   The same rule the rest of the project follows: travel goes, the cross-fade
+   stays. A timeline whose points never appear at all would read as a list that
+   failed to load, and the preference is about movement, not about content
+   arriving.
+
+   The rail is the one thing that stops moving outright — it is a 600px stroke
+   travelling down the page, which is exactly the scale of movement the
+   preference exists for — so it is simply there, faded in with its point.
+   --------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .timeline__card {
+    --from-x: 0rem;
+    transform: none;
+    transition: opacity 400ms var(--ease-out) 60ms;
+  }
+
+  .timeline__item::before {
+    transform: translateX(-50%) scaleY(1);
+    opacity: 0;
+    transition: opacity 400ms var(--ease-out);
+  }
+
+  .timeline__item[data-shown]::before {
+    opacity: 1;
+  }
+
+  .timeline__item::after {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+    transition: opacity 400ms var(--ease-out);
+  }
+
+  .timeline__item[data-shown]::after {
+    opacity: 1;
+  }
+}

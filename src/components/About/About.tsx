@@ -4,6 +4,7 @@ import { SITE } from '../../config/site'
 import { useLanguage } from '../../hooks/useLanguage'
 import { useReveal } from '../../hooks/useReveal'
 import { CvDialog } from './CvDialog'
+import { Timeline } from './Timeline'
 import './about.css'
 
 /**
@@ -126,14 +127,31 @@ export function About() {
             <p className="section__lead about__tagline" data-reveal>
               {t.about.tagline}
             </p>
-
-            <Cv />
           </div>
 
           <aside className="about__aside">
             <Portrait alt={t.about.portraitAlt} />
           </aside>
         </div>
+
+        {/* Full width, straight after the prose, and immediately before the CV:
+            the paragraphs above say the path did not start in IT, this is that
+            path, and the button to read the whole thing properly sits at the
+            end of it.
+
+            It has to be full width — alternating points inside the 1.22fr text
+            column would be two very narrow ones, and the long headlines wrap
+            to five lines there. That is why the CV block came OUT of the text
+            column rather than the line going into it: putting the line before
+            the CV was the ask, and only one of the two could keep the column.
+
+            The CV block loses nothing by the move. Its paragraph was already
+            capped at 40rem — about what the column gave it — and the buttons
+            are an inline-grid that takes its width from the wider label, so
+            neither of them stretches now that the room is wider. */}
+        <Timeline />
+
+        <Cv />
 
         {/* Full width, under both columns: the facts read as one row of labelled
             values rather than a narrow stack beside the portrait. The heading
