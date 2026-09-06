@@ -109,9 +109,9 @@ export function About() {
   const { t } = useLanguage()
   const root = useRef<HTMLDivElement>(null)
   useReveal(root)
-  /** Whether the line has reached the point it ends on. The CV block waits for
-   *  it, so "read the whole history" cannot arrive before the history has
-   *  finished drawing. */
+  /** Whether the line has reached the point it ends on. Everything below the
+   *  line waits for it, so neither "read the whole history" nor the figures
+   *  summing it up can arrive before the history has finished drawing. */
   const [pathDone, setPathDone] = useState(false)
 
   return (
@@ -165,8 +165,20 @@ export function About() {
         {/* Full width, under both columns: the facts read as one row of labelled
             values rather than a narrow stack beside the portrait. The heading
             sits outside the panel, so the panel holds only the values and can
-            centre them. */}
-        <section className="about__facts-block" data-reveal>
+            centre them.
+
+            On the same latch as the CV above it, not on `data-reveal`, and for
+            the same reason the CV came off it. `useReveal` brings a block in on
+            its own position — the top edge crossing 90% of the viewport — and
+            these two blocks are only a few hundred pixels apart, so the one
+            underneath was reaching its line and finishing a 0.9s fade while the
+            CV was still waiting on the timeline and had not started. Summing up
+            arrived before the thing being summed up.
+
+            Sharing the latch makes the order structural: both wait for the line
+            to reach its last point and the delays in about.css decide which of
+            them moves first, whatever speed the page is scrolled at. */}
+        <section className="about__facts-block" data-shown={pathDone || undefined}>
           <h3 className="about__facts-title">{t.about.factsTitle}</h3>
           <div className="about__facts card">
             <dl className="about__facts-list">

@@ -35,7 +35,23 @@ export function useReveal(
   scope: RefObject<HTMLElement | null>,
   options: { stagger?: number; y?: number; duration?: number } = {},
 ) {
-  const { stagger = 0.2, y = 22, duration = 0.3 } = options
+  /**
+   * Seconds for one element's entrance, and between two siblings'.
+   *
+   * These were 0.3 and 0.2, and 0.3s is eighteen frames — long enough to see,
+   * too short to read as movement, so a heading arriving as you scrolled past
+   * it registered as a pop rather than as something coming in. Nearly a second
+   * on `power2.inOut` gives the fade a slow start and a slow end, which is the
+   * part that was missing: the first tenth of the curve now moves 2% of the
+   * way instead of a fifth of it.
+   *
+   * The stagger comes down as the duration goes up. Held at 0.2 a five-element
+   * group would take 1.7s end to end and the last of them would still be
+   * arriving after the reader had scrolled past; at 0.16 the entrances overlap
+   * generously, which is what makes a group read as one movement rather than
+   * as a queue.
+   */
+  const { stagger = 0.16, y = 22, duration = 0.9 } = options
 
   useGSAP(
     () => {
@@ -75,7 +91,12 @@ export function useReveal(
             // Back the way it came: something that left over the top lifts
             // away upwards, not down into the viewport it just left.
             y: above ? -lift : lift,
-            duration: budget.duration(duration),
+            // Quicker going than coming. An exit only starts once the element
+            // is 15% of a viewport clear of the edge, so nobody is watching it
+            // — matching the entrance's length there would only mean an
+            // element scrolled back to while still fading out, which arrives
+            // mid-fade and has to fight its own tween.
+            duration: budget.duration(duration * 0.6),
             ease: 'power2.inOut',
             overwrite: 'auto',
           })
