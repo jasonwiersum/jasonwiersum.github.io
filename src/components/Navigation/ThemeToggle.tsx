@@ -28,7 +28,14 @@ export function ThemeToggle() {
         icon={theme === 'dark' ? Moon : Sun}
         size={17}
         strokeWidth={1.9}
-        spring="snappy"
+        /* `snappy` (k 420, c 30) read as a flick rather than a change of state.
+           This is the same spring slowed down: the damping ratio is kept at
+           snappy's 0.73 — c / 2*sqrt(k) — so the shape still settles with the
+           same faint overshoot, and only the rate changes, by sqrt(420/210),
+           about 1.4x. The gear beside it keeps `snappy`: opening a panel should
+           answer at once, where changing the whole page's theme can take a
+           moment. */
+        spring={{ stiffness: 210, damping: 21 }}
         /* A 17px glyph changing shape in place is not a vestibular trigger, so
            it keeps animating under prefers-reduced-motion — "user" made it swap
            instantly on any machine with the OS setting on. Same call as the

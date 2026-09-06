@@ -372,10 +372,16 @@ p {
   z-index: var(--z-content);
   max-width: min(var(--container), calc(100% - 2 * var(--space-6)));
   margin-inline: auto;
-  margin-block: var(--space-6);
+  /* The top margin clears the islands rather than running underneath them.
+     Both of them sit at `--space-4` from the top of the page and are
+     `--island-h` tall, so starting the sheet a second `--space-4` below their
+     bottom edge leaves the same gap under them as there is above them. At
+     `--space-6` the sheet's border and its rounded corner crossed the islands
+     at their middle, which is what gave away that they are separate things. */
+  margin-block: calc(2 * var(--space-4) + var(--island-h)) var(--space-6);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  background: var(--surface);
+  background: var(--sheet-surface);
   box-shadow: var(--shadow-lg);
   /* The footer's rule and the hero's corners have to stop at the sheet's own,
      or they run out past the rounding. */
@@ -398,5 +404,10 @@ p {
     margin-block: 0;
     border-inline: 0;
     border-radius: 0;
+    /* And a heavier surface. On a phone the sheet is the whole screen, so
+       whatever it lets through is the background everywhere rather than a
+       margin around the edges — the desktop's 0.72 puts the gradient behind
+       the text from corner to corner. */
+    background: var(--sheet-surface-phone);
   }
 }
