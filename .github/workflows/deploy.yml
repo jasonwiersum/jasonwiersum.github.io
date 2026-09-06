@@ -49,6 +49,12 @@ jobs:
       # the code has to know the repository's name or URL:
       #   <owner>.github.io  -> served at "/"
       #   any other repo     -> served at "/<repo>/"
+      #
+      # The full origin comes out of the same two names. The sitemap and the
+      # social preview both need it — a sitemap has to carry absolute URLs and
+      # a scraper fetches og:image from its own machine, with no page to
+      # resolve a path against — and this is the one place that already knows
+      # the host without anybody having written it down.
       - name: Resolve base path
         id: base
         run: |
@@ -61,10 +67,18 @@ jobs:
           else
             echo "path=/$repo/" >> "$GITHUB_OUTPUT"
           fi
+          echo "url=https://${owner_lc}.github.io$(
+            [ "$repo_lc" = "${owner_lc}.github.io" ] && echo "/" || echo "/$repo/"
+          )" >> "$GITHUB_OUTPUT"
 
+      # sitemap.xml carries the commit's date, not the build's, so the nightly
+      # CV rebuild does not move it. `fetch-depth: 0` is not needed for that —
+      # the checkout above leaves the head commit, which is the one being
+      # published.
       - name: Build
         env:
           BASE_PATH: ${{ steps.base.outputs.path }}
+          SITE_URL: ${{ steps.base.outputs.url }}
         run: npm run build
 
       # Only the built copy is stamped. The PDF in the repository stays exactly

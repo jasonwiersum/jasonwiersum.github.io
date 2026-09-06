@@ -96,21 +96,38 @@
    cutting. The head is at 49.2% of the idle's width and 49.1% of the wave's —
    measured, not assumed — which is what makes one `object-position` correct for
    both. */
-/* The idle is two alternating layers above the wave — see idleNodes for why.
-   Takes swap between them, so what one uncovers on the way out is usually the
-   OTHER one, still fading in. That is the case the shared hold-then-go rule
-   above exists for, and these keep it: the layer arriving animates on sight,
-   the one leaving holds at full opacity for the length of that fade and only
-   then goes.
+/* The resting loop is three alternating layers above the wave — see loopNodes
+   for why. Takes swap between them, so what one uncovers on the way out is
+   another of them, still fading in. That is the case the shared hold-then-go
+   rule above exists for, and these keep it: the layer arriving animates on
+   sight, the one leaving holds at full opacity for the length of that fade and
+   only then goes.
 
    Leaving for the wave is the exception. There what they uncover is opaque
    already, so the hold would only stretch that dissolve to twice its length,
-   and the container drops it. */
+   and the container drops it.
+
+   The layer arriving is also always the one on top.
+
+   Left to DOM order the three of them stack idle, coffee, yawn, so two of the
+   cycle's three swaps fade the new clip in UNDER the old one. That is still
+   covered — the old one holds at full opacity while it happens — but it means
+   nothing can be seen changing until the hold ends, and the swap is not
+   finished until one fade after that. Two of the same swap took twice as long
+   as the third, which is not something a schedule can be written against: the
+   dissolve has to land exactly as the next take begins, and that is one
+   CLIP_FADE, not sometimes two.
+
+   Raising whichever layer is arriving settles all three the same way. The swap
+   costs nothing at the moment it happens — the layer coming up is at opacity 0,
+   so raising it changes no pixel — and the one going down keeps its hold
+   underneath, where it covers the wave for exactly as long as it used to. */
 .character__idle {
-  z-index: 1;
+  z-index: 0;
 }
 
 .character__idle[data-playing] {
+  z-index: 1;
   opacity: 1;
   transition: opacity var(--clip-fade, 300ms) var(--ease-out);
 }

@@ -46,11 +46,12 @@ const YAWN = `${import.meta.env.BASE_URL}character/yawn.mp4`
  * and can paint — so every hand-over would have to prove it again, and the
  * proof is a play/pause round trip. Three elements keep one proof each.
  *
- * Measured on the composited crop, the two seams this order adds are the best
- * in the set: coffee's last frame to yawn's first is 1.81 of 255, which is
- * inside coffee's own frame-to-frame step of 1.74, and yawn's last to the
- * idle's first is 4.00, against 4.30 for the greeting hand-over that was
- * called perfect.
+ * The order no longer carries any weight, and that is the point of the rewind
+ * in `rewindIdle`: every clip now departs from its own opening frame, so every
+ * seam of the cycle is one first frame to another and the two possible rounds
+ * are the same three seams in the other direction — measured over the head,
+ * 6.60, 2.38 and 6.92 of 255 either way. Picking an order used to mean picking
+ * which last frames to live with, and the worst of those was 15.26.
  */
 const LOOP = [IDLE, COFFEE, YAWN]
 
@@ -122,22 +123,21 @@ export function CharacterStage() {
   const [greetingOver, setGreetingOver] = useState(false)
   const [idleBroken, setIdleBroken] = useState(false)
   /**
-   * The resting loop's two layers, and everything that keeps the second one
-   * from being able to break the character.
+   * The resting loop's layers, and everything that keeps a spare from being
+   * able to break the character.
    *
-   * They hold different clips — slot 0 the idle, slot 1 the coffee — and takes
-   * alternate between them, so every swap dissolves two shots that already line
-   * up rather than cutting. Measured on the composited crops, mean absolute
-   * difference of 255: the idle's last frame to the coffee's first is 3.99, the
-   * coffee's last to the idle's first is 3.13, and neither has a better opening
-   * frame to start from — searched frame by frame, the coffee's own frame 0
-   * wins both ways. The seams already shipping run 2.75 to 4.09.
+   * One per clip — slot 0 the idle, slot 1 the coffee, slot 2 the yawn — and
+   * takes walk round them, so every swap dissolves two shots that already line
+   * up rather than cutting. Each of them departs from its own opening frame
+   * (see rewindIdle), which is what makes the three seams comparable at all:
+   * measured over the head, they are 6.60, 2.38 and 6.92 of 255, against the
+   * 5.91 to 6.66 of the seams that already read as seamless.
    *
-   * The pair predates the coffee: it was two copies of the idle, dissolving the
+   * The set predates the coffee: it was two copies of the idle, dissolving the
    * idle's own wrap, because that clip does not loop into itself — last frame
-   * 2.24 from first, seventeen normal frame steps, no clean loop point anywhere
+   * 2.10 from first, seventeen normal frame steps, no clean loop point anywhere
    * in it. Alternating clips retires that problem instead of solving it, since
-   * the idle no longer follows itself. The count of video elements is unchanged.
+   * the idle no longer follows itself.
    *
    * An <img> of the frame was tried first and measured worse than the problem:
    * painting a LOSSLESS image of a frame instead of the video's own differs by
@@ -192,6 +192,22 @@ export function CharacterStage() {
    */
   const smileOver = useRef<'idle' | 'wave'>('idle')
   const restTimer = useRef<number | undefined>(undefined)
+  /**
+   * The swap, held back until the rest is nearly over.
+   *
+   * The hand-over used to run the instant a take ended, which put the whole of
+   * the 7-11s rest on the NEXT clip's opening frame. That is what read as the
+   * coffee standing about: it arrived, froze mid-reach for ten seconds, and
+   * only then moved. The rest now sits on the clip that just finished — where
+   * the character actually came to a stop — and the dissolve is scheduled to
+   * land exactly as the next take begins.
+   *
+   * `nextSlot` is what the dissolve will swap to, chosen and proved ready as
+   * soon as the take ends so the proof has the whole rest to complete rather
+   * than racing the fade. Null means nothing is pending.
+   */
+  const swapTimer = useRef<number | undefined>(undefined)
+  const nextSlot = useRef<number | null>(null)
   /** Holds the replayed wave on its first frame until the idle has dissolved
    *  off it. */
   const waveStartTimer = useRef<number | undefined>(undefined)
@@ -281,59 +297,75 @@ export function CharacterStage() {
    */
   const startIdleRef = useRef<() => void>(() => {})
 
-  const rest = useCallback(() => {
-    const min = reduced ? IDLE_REST.reducedMin : IDLE_REST.min
-    const max = reduced ? IDLE_REST.reducedMax : IDLE_REST.max
-    const wait = (min + Math.random() * (max - min)) * 1000
-    window.clearTimeout(restTimer.current)
-    restTimer.current = window.setTimeout(() => startIdleRef.current(), wait)
-  }, [reduced])
-
-  const startIdle = useCallback(() => {
+  /**
+   * Put the showing clip back on its opening frame before a dissolve leaves it.
+   *
+   * Every outgoing dissolve used to depart from wherever the take had ended,
+   * and that is what the small jump was. The head drifts through a take and is
+   * furthest from where the other clips open at the moment the take finishes:
+   * measured on the composited crops, the idle's LAST frame sits 4.87 of 255
+   * from the wave's first and 4.08 from the smile's, while its FIRST frame sits
+   * at 4.00 and 3.19. The seams that read as perfect — the greeting handing
+   * over to the idle, and the smile handing back — are 3.24 and 3.12, so 3.19
+   * is inside that band and 4.87 is plainly outside it.
+   *
+   * The wave and the smile were given this and the loop was not, on a
+   * whole-frame mean that said the loop did not need it: the idle's last frame
+   * to the coffee's first is 3.99, which sits right on the 4.00 the fixed wave
+   * seam measures. That number was measuring the wrong thing. Nearly all of a
+   * frame here is backdrop and jumper, which barely move, so the head — the one
+   * place anybody looks — is averaged away. Measured over the head alone, on
+   * the same crops, the picture inverts:
+   *
+   *     idle[last]  -> coffee[first]   15.26     the loop hand-over, today
+   *     idle[last]  -> wave[first]     14.92     the seam this rewind was written for
+   *     idle[first] -> coffee[first]    6.60     the loop hand-over, rewound
+   *     idle[first] -> wave[first]      5.91  \
+   *     idle[first] -> smile[first]     6.53   |  the seams that read as fine
+   *     wave[last]  -> idle[first]      6.17   |
+   *     yawn[last]  -> idle[first]      6.66  /
+   *     coffee[last]-> yawn[first]      2.44
+   *
+   * So idle -> coffee was carrying the whole of the old wave jump, and a
+   * two-second crossfade does not hide it — it holds the two head positions on
+   * screen together, as a double exposure, for the entire fade.
+   *
+   * Nothing else was available. Searched frame by frame, no clip has an opening
+   * frame that matches the idle's end better than its own frame 0, and the
+   * idle's own frame 0 is the best of its 141 frames to depart from towards the
+   * coffee. Head size and position agree across all clips to within 1.6% and
+   * the global grade difference is 1.52 at worst, so the departure frame is the
+   * whole of the lever.
+   *
+   * The step back to frame 0 is the clip's own wrap: 2.10 for the idle — the
+   * same one the loop already makes at the start of every take — and 0.81 and
+   * 0.83 for the coffee and the yawn, which end where they began.
+   */
+  const rewindIdle = useCallback(() => {
     const node = loopNodes.current[loopSlotRef.current]
     if (!node) return
-    setPhase('idle')
-    // Usually a no-op: a hand-over at the end of the last take left this layer
-    // parked here, which is the point — the take begins on the frame already
-    // showing. It still matters when the hand-over did not happen, and then
-    // this is the old cut, which is the fallback rather than the design.
+    node.pause()
+    idleRunning.current = false
     if (node.currentTime !== 0) node.currentTime = 0
-    idleRunning.current = true
-
-    // Start pulling the other half of the loop down now, with a take and a rest
-    // still to run before it is wanted. Nothing depends on it arriving: if it
-    // has not, the hand-over does not happen and the same clip plays again.
-    const other = loopNodes.current[(loopSlotRef.current + 1) % LOOP.length]
-    if (other && other.preload === 'none' && !other.error) {
-      other.preload = 'auto'
-      other.load()
-    }
-    const started = node.play()
-    // A refusal is not fatal here: the character simply keeps holding its last
-    // frame and the next rest tries again.
-    if (started) {
-      started.catch(() => {
-        idleRunning.current = false
-        rest()
-      })
-    }
-  }, [rest])
-
-  useEffect(() => {
-    startIdleRef.current = startIdle
-  }, [startIdle])
+  }, [])
 
   /**
-   * A take has finished and nothing is waiting on it: dissolve the wrap.
+   * Choose the next clip of the cycle and prove it can paint. No swap.
    *
    * The spare has to prove it can paint before anything is handed to it, and
    * playing it is the only proof there is — a loaded video that has never run
    * is exactly the case Safari does not reliably draw. So it is played and
-   * paused at opacity 0, under the layer still showing, and the swap happens
-   * only if that round trip resolves. Every way this can fail ends in the same
-   * place: no swap, and `startIdle` cuts back to frame 0 as it always did.
+   * paused at opacity 0, under the layer still showing, and it becomes the
+   * pending swap only if that round trip resolves. Every way this can fail ends
+   * in the same place: nothing pending, no swap, and `startIdle` cuts back to
+   * frame 0 as it always did.
+   *
+   * This used to do the swap as well, which meant the proof had to be finished
+   * before the dissolve could start and the dissolve started the instant the
+   * take ended. Split from `commitHandOver`, it runs at the end of the take and
+   * has the whole rest to complete instead of racing a fade.
    */
-  const handOverLoop = useCallback(async () => {
+  const primeNext = useCallback(async () => {
     // Walk forward through the cycle rather than stopping at the first clip
     // that is not ready. With two of them the only alternative to the next one
     // was staying put; with three, a yawn that has not arrived should hand to
@@ -364,42 +396,101 @@ export function CharacterStage() {
 
       node.pause()
       if (node.currentTime !== 0) node.currentTime = 0
-      loopSlotRef.current = next
-      setLoopSlot(next)
+      nextSlot.current = next
       return
     }
   }, [])
 
   /**
-   * Put the idle back on its opening frame before a dissolve leaves it.
+   * Dissolve to the clip `primeNext` chose.
    *
-   * Both outgoing dissolves used to depart from wherever the take had ended,
-   * and that is what the small jump was. The head drifts through a take and is
-   * furthest from where the other two clips open at the moment the take
-   * finishes: measured on the composited crops, the idle's LAST frame sits 4.87
-   * of 255 from the wave's first and 4.08 from the smile's, while its FIRST
-   * frame sits at 4.00 and 3.19. The seams that read as perfect — the greeting
-   * handing over to the idle, and the smile handing back — are 3.24 and 3.12,
-   * so 3.19 is inside that band and 4.87 is plainly outside it.
+   * Scheduled one CLIP_FADE before the next take, so the fade finishes on the
+   * frame the take starts from — the same shape the replayed wave and the smile
+   * already use, where the arriving clip is held on its first frame for exactly
+   * one fade and only then plays. The clip that just finished holds the rest,
+   * rewound to its opening frame, and the swap is the last thing that happens
+   * before it moves again.
    *
-   * Nothing else was available. Searched frame by frame, neither clip has an
-   * opening frame that matches the idle's end better than its own frame 0
-   * (best gains: 0.40 and 0.23, and 0.00 and 0.05 against the idle's start),
-   * head size and position agree across all three to within 1.6%, and the
-   * global grade difference is 1.52 at worst. The departure frame is the whole
-   * of the lever.
-   *
-   * The step back to frame 0 is the idle's own wrap, 2.75 — the smallest seam
-   * in the set, and the same one the loop already makes at the start of every
-   * take.
+   * The rewind and the swap are one tick, as they are in `playWave`: the settle
+   * back to frame 0 lands on the first frame of the dissolve rather than naked
+   * in the middle of a rest, where any change at all is the only thing moving.
    */
-  const rewindIdle = useCallback(() => {
+  const commitHandOver = useCallback(() => {
+    const next = nextSlot.current
+    if (next === null) return
+    nextSlot.current = null
+    const node = loopNodes.current[next]
+    if (!node) return
+    // The clip leaving departs from its opening frame — see rewindIdle. This
+    // is the seam that was jumping.
+    rewindIdle()
+    node.pause()
+    if (node.currentTime !== 0) node.currentTime = 0
+    loopSlotRef.current = next
+    setLoopSlot(next)
+  }, [rewindIdle])
+
+  const rest = useCallback(() => {
+    const min = reduced ? IDLE_REST.reducedMin : IDLE_REST.min
+    const max = reduced ? IDLE_REST.reducedMax : IDLE_REST.max
+    const wait = (min + Math.random() * (max - min)) * 1000
+    window.clearTimeout(restTimer.current)
+    window.clearTimeout(swapTimer.current)
+    // One fade before the take, not at the top of the rest. The rest is spent
+    // on the clip that just finished; the next one arrives as it starts.
+    swapTimer.current = window.setTimeout(() => {
+      // Priming normally finished seconds ago. If it did not — a clip that was
+      // still arriving when the take ended — this is the last chance to catch
+      // it, and it is worth the fade starting a moment late: the alternative is
+      // the same clip playing twice running.
+      if (nextSlot.current === null) {
+        void primeNext().then(commitHandOver)
+        return
+      }
+      commitHandOver()
+    }, Math.max(0, wait - CLIP_FADE))
+    restTimer.current = window.setTimeout(() => startIdleRef.current(), wait)
+  }, [reduced, primeNext, commitHandOver])
+
+  const startIdle = useCallback(() => {
+    // Normally already done by the swap timer one fade ago. It still matters
+    // when a wave or a smile cut the rest short: the swap it was holding is
+    // applied here instead, while every loop layer is transparent under the
+    // clip that interrupted, so the cycle still advances rather than repeating
+    // the take the tap interrupted.
+    commitHandOver()
     const node = loopNodes.current[loopSlotRef.current]
     if (!node) return
-    node.pause()
-    idleRunning.current = false
+    setPhase('idle')
+    // Usually a no-op: the hand-over parked this layer here, which is the point
+    // — the take begins on the frame already showing. It still matters when the
+    // hand-over did not happen, and then this is the old cut, which is the
+    // fallback rather than the design.
     if (node.currentTime !== 0) node.currentTime = 0
-  }, [])
+    idleRunning.current = true
+
+    // Start pulling the next clip of the cycle down now, with a take and a rest
+    // still to run before it is wanted. Nothing depends on it arriving: if it
+    // has not, the hand-over does not happen and the same clip plays again.
+    const other = loopNodes.current[(loopSlotRef.current + 1) % LOOP.length]
+    if (other && other.preload === 'none' && !other.error) {
+      other.preload = 'auto'
+      other.load()
+    }
+    const started = node.play()
+    // A refusal is not fatal here: the character simply keeps holding its last
+    // frame and the next rest tries again.
+    if (started) {
+      started.catch(() => {
+        idleRunning.current = false
+        rest()
+      })
+    }
+  }, [rest, commitHandOver])
+
+  useEffect(() => {
+    startIdleRef.current = startIdle
+  }, [startIdle])
 
   /**
    * Wave again, on a tap inside the frame.
@@ -464,8 +555,12 @@ export function CharacterStage() {
 
     // Everything the idle cycle had pending, cancelled: a rest that fires
     // mid-smile would restart the idle underneath it, and a queued wave would
-    // jump in the moment the smile ended.
+    // jump in the moment the smile ended. The swap keeps whatever it had
+    // pending — `startIdle` applies it when the smile hands back, under a layer
+    // nobody can see — but its timer must not fire and dissolve the loop
+    // underneath the easter egg.
     window.clearTimeout(restTimer.current)
+    window.clearTimeout(swapTimer.current)
     window.clearTimeout(waveStartTimer.current)
     window.clearTimeout(smileStartTimer.current)
     window.clearTimeout(smileWaitTimer.current)
@@ -547,6 +642,7 @@ export function CharacterStage() {
     // it can be is that the wave is left RUNNING underneath: the arm comes down
     // through the dissolve instead of freezing where it was.
     window.clearTimeout(restTimer.current)
+    window.clearTimeout(swapTimer.current)
     playSmile()
   }, [playSmile])
 
@@ -581,7 +677,11 @@ export function CharacterStage() {
       waveQueued.current = true
       return
     }
+    // The rest is cut short, so the swap it was holding does not get its
+    // dissolve. It stays pending: the wave's own hand-back applies it while
+    // every loop layer is transparent, so the tap costs the cycle nothing.
     window.clearTimeout(restTimer.current)
+    window.clearTimeout(swapTimer.current)
     playWave()
   }, [phase, idleBroken, playWave, armSmile, smileBroken])
 
@@ -589,6 +689,7 @@ export function CharacterStage() {
   useEffect(
     () => () => {
       window.clearTimeout(restTimer.current)
+      window.clearTimeout(swapTimer.current)
       window.clearTimeout(waveStartTimer.current)
       window.clearTimeout(smileStartTimer.current)
       window.clearTimeout(smileWaitTimer.current)
@@ -859,8 +960,11 @@ export function CharacterStage() {
                 if (smileQueued.current) playSmile()
                 else if (waveQueued.current) playWave()
                 else {
+                  // The rest schedules the dissolve; this only picks the clip
+                  // it will hand to and proves it can paint, with the whole
+                  // rest to do it in.
                   rest()
-                  void handOverLoop()
+                  void primeNext()
                 }
               }}
               onError={() => {
