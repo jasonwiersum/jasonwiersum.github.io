@@ -4,6 +4,7 @@ import { XingMark } from './XingMark'
 import { SITE } from '../../config/site'
 import { useLanguage } from '../../hooks/useLanguage'
 import { useReveal } from '../../hooks/useReveal'
+import { useRevealed } from '../../hooks/useRevealed'
 import { ContactForm } from './ContactForm'
 import './contact.css'
 
@@ -11,6 +12,26 @@ export function Contact() {
   const { t } = useLanguage()
   const root = useRef<HTMLElement>(null)
   useReveal(root)
+
+  /**
+   * The links arrive with the form, whichever of the two the reader reaches
+   * first.
+   *
+   * They are one offer — write to me here, or find me over there — and only
+   * the markup separates them. On a wide screen the form is in the right
+   * column and the links sit low in the left one, 170px further down, so on
+   * their own position they were the last thing on the page to appear: the
+   * form was there to be filled in while LinkedIn, Xing and GitHub were still
+   * invisible, and a reader who stopped at the form never saw them at all.
+   * Stacked on a narrow screen the order flips and the links come first.
+   *
+   * So neither one waits for the other: whichever crosses the entrance line
+   * first brings both, which is the same rule in both layouts rather than a
+   * breakpoint's worth of special cases. They leave together for the same
+   * reason.
+   */
+  const [linksBox, linksNear] = useRevealed()
+  const [formBox, formNear] = useRevealed()
 
   return (
     <section id="contact" className="section contact" ref={root}>
@@ -23,7 +44,15 @@ export function Contact() {
             {t.contact.lead}
           </p>
 
-          <div className="contact__links" data-reveal>
+          {/* `data-shown` rather than `data-reveal`: this block answers to the
+              form's position as well as its own, which a plain reveal cannot
+              express. Carrying both would put useReveal's opacity in a fight
+              with the CSS transition. */}
+          <div
+            className="contact__links"
+            ref={linksBox}
+            data-shown={linksNear || formNear || undefined}
+          >
             <p className="contact__links-title">{t.contact.elsewhere}</p>
             <ul>
               <li>
@@ -68,7 +97,9 @@ export function Contact() {
           </div>
         </div>
 
-        <div className="contact__form-wrap card" data-reveal>
+        {/* Keeps its own reveal; the ref is only there to be watched, so the
+            links can come in with it. */}
+        <div className="contact__form-wrap card" ref={formBox} data-reveal>
           <ContactForm />
         </div>
       </div>
