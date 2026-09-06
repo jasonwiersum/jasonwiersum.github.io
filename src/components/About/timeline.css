@@ -82,11 +82,38 @@
   pointer-events: none;
 }
 
-/* Faint and always there. Without it the fill would appear to be creating the
-   rail rather than travelling down one that already exists. */
+/* The faint track the drawn line travels along. It is there so the line reads
+   as moving down something rather than as creating it — but only just ahead of
+   itself, not the whole way down the block.
+
+   A full-length grey line was the whole path spoiled in advance: nine points
+   and every one of them announced before the reader got there. So the track is
+   masked to a window that follows the head of the fill — solid for `--rail-
+   seen`, gone by `--rail-fade`, both set in px from the top of the rail by
+   Timeline.tsx on the same frame as the fill's height. What that gives is a
+   short grey lead below the blue, dissolving into nothing, with more of it
+   surfacing from underneath as the reader goes down.
+
+   The mask is on the track alone. The fill is drawn over it and must not fade
+   at its own head — a line that goes soft exactly where it stops looks like it
+   failed to finish. */
 .timeline__rail {
   height: calc(100% - var(--last-h, 0px));
   background: var(--border);
+  --rail-seen: 0px;
+  --rail-fade: 120px;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 var(--rail-seen),
+    transparent var(--rail-fade)
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0,
+    #000 var(--rail-seen),
+    transparent var(--rail-fade)
+  );
 }
 
 /* The drawn line. Its height is set from the scroll position on every frame —
@@ -145,25 +172,42 @@
 
 /* The two ends of the line are drawn heavier — the point you start from and
    the one you are at now. Hollow rather than bigger: a larger filled dot at
-   this size just reads as a rendering error next to its neighbours. */
+   this size just reads as a rendering error next to its neighbours.
+
+   With an accent pip in the middle of the hollow, which is what turns it from
+   a ring into a target: ~5px inside a ~10px opening, so it reads as a mark at
+   the centre rather than as the ring having partly filled in.
+
+   Drawn as a radial gradient rather than a second element, because a second
+   element here would need its own scale transition kept in step with the dot's
+   and its own z-index to sit above it. The last stop is the panel colour and
+   not `transparent`: a gradient fading to transparent interpolates through
+   premultiplied black and leaves a grey collar around the pip. */
 .timeline__item[data-emphasis]::after {
   width: calc(var(--dot) * 1.34);
   height: calc(var(--dot) * 1.34);
-  background: var(--background-elevated);
+  background: radial-gradient(
+    circle at center,
+    var(--accent) 0 0.16rem,
+    var(--background-elevated) 0.2rem
+  );
   border: 3px solid var(--accent);
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 /* The pulse on the last point.
 
-   The line ends on where Jason is now, and a ring leaves that dot every five
+   The line ends on where Jason is now, and a ring leaves that dot every three
    seconds and fades out on its way. It starts at exactly the emphasised dot's
    size and carries the same 2px accent stroke, so what expands reads as that
    dot's own edge coming away from it rather than as a second object appearing
    underneath.
 
-   One eased interval for the visible part and a long flat tail: 0% to 28% of a
-   5s cycle is 1.4s of ring, then 3.6s of nothing. Splitting the fade and the
+   One eased interval for the visible part and a flat tail: 0% to 42% of a 3s
+   cycle is 1.26s of ring, then 1.74s of nothing. The cycle came down from 5s
+   and the percentage went up to meet it, so the ring still expands at the pace
+   it did and only the wait between rings is shorter — 28% of 3s would have
+   been the same movement rushed through in 0.84s. Splitting the fade and the
    growth across more keyframes was tried first and each interval got its own
    easing, which made the expansion arrive in steps — two keyframes is what
    keeps it one movement.
@@ -194,7 +238,7 @@
 }
 
 .timeline__item[data-shown] .timeline__pulse {
-  animation: timeline-pulse 5s var(--ease-out) infinite;
+  animation: timeline-pulse 3s var(--ease-out) infinite;
 }
 
 @keyframes timeline-pulse {
@@ -202,7 +246,7 @@
     transform: translate(-50%, -50%) scale(1);
     opacity: 0.5;
   }
-  28% {
+  42% {
     transform: translate(-50%, -50%) scale(var(--pulse-scale));
     opacity: 0;
   }
