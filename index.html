@@ -13,20 +13,46 @@
     <meta name="theme-color" content="#d6e3ff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0b0c10" media="(prefers-color-scheme: dark)" />
 
-    <!-- Open Graph / social -->
+    <link rel="canonical" href="%SITE_URL%" />
+
+    <!-- Open Graph / social
+
+         %SITE_URL% is the deployed origin, filled in at build time by the
+         siteMetadata plugin in vite.config.ts. It has to be absolute and it has
+         to be here: a scraper fetches og:image from its own machine, with no
+         page to resolve a path against, so a relative one is dropped and the
+         link goes out as bare text. That is what these three tags fix.
+
+         og:image:width and :height let Slack and LinkedIn reserve the wide card
+         before the image has arrived, instead of falling back to the small
+         square one and never correcting it. -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Jason Wiersum" />
+    <meta property="og:url" content="%SITE_URL%" />
     <meta property="og:title" content="Jason Wiersum | Anwendungsentwickler" />
     <meta
       property="og:description"
       content="Anwendungsentwickler (IHK) aus Nürnberg mit Hintergrund im Industriedesign. Software · Design · Kreativität."
     />
     <meta property="og:locale" content="de" />
+    <meta property="og:image" content="%SITE_URL%og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Jason Wiersum, Anwendungsentwickler (IHK) aus Nürnberg."
+    />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Jason Wiersum | Anwendungsentwickler" />
     <meta
       name="twitter:description"
       content="Anwendungsentwickler (IHK) aus Nürnberg mit Hintergrund im Industriedesign. Software · Design · Kreativität."
+    />
+    <meta name="twitter:image" content="%SITE_URL%og-image.png" />
+    <meta
+      name="twitter:image:alt"
+      content="Jason Wiersum, Anwendungsentwickler (IHK) aus Nürnberg."
     />
 
     <!-- An ICO as well as the SVG: Chromium-based browsers (Brave among them)
