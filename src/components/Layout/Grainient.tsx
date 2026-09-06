@@ -45,6 +45,9 @@ interface GrainientProps {
   enableMouseInteraction?: boolean;
   /** Reach of the pointer, in aspect-corrected screen halves. */
   mouseRadius?: number;
+  /** How much of the page's scroll the gradient follows. 0 holds it still,
+   *  1 would pin it to the content. */
+  scrollParallax?: number;
 }
 
 const hexToRgb = (hex: string): [number, number, number] => {
@@ -82,6 +85,7 @@ uniform float uGamma;
 uniform float uSaturation;
 uniform vec2 uCenterOffset;
 uniform float uZoom;
+uniform float uScrollOffset;
 uniform vec2 uMouse;
 uniform float uMouseRadius;
 uniform float uMouseStrength;
@@ -98,7 +102,12 @@ void mainImage(out vec4 o, vec2 C){
   float t=iTime*uTimeSpeed;
   vec2 uv=C/iResolution.xy;
   float ratio=iResolution.x/iResolution.y;
-  vec2 tuv=uv-0.5+uCenterOffset;
+  // The scroll rides in as a shift of the sampling centre. Translating the
+  // canvas would do the same thing to look at, but the canvas is exactly the
+  // viewport and fixed, so any transform opens a gap at one edge — covering it
+  // would mean a canvas some 850px taller on this page, and that many more
+  // pixels shaded every frame for something that costs nothing here.
+  vec2 tuv=uv-0.5+uCenterOffset+vec2(0.0,uScrollOffset);
   tuv/=max(uZoom,0.001);
 
   float degree=noise(vec2(t*0.1,tuv.x*tuv.y)*uNoiseScale);
@@ -217,7 +226,8 @@ const Grainient: React.FC<GrainientProps> = ({
   className = '',
   paused = false,
   enableMouseInteraction = false,
-  mouseRadius = 0.5
+  mouseRadius = 0.5,
+  scrollParallax = 0
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   // Read inside the render loop, which is built once and never rebuilt, so the
@@ -229,6 +239,7 @@ const Grainient: React.FC<GrainientProps> = ({
   // is built once, so they travel by ref rather than as dependencies.
   const pointer = useRef({ targetX: 0, targetY: 0, x: 0, y: 0, target: 0, strength: 0, seen: false });
   const mouseOn = useRef(enableMouseInteraction);
+  const parallax = useRef(scrollParallax);
 
   // Effect 1: build WebGL context once, pause when offscreen / tab hidden
   useEffect(() => {
@@ -274,6 +285,7 @@ const Grainient: React.FC<GrainientProps> = ({
         uSaturation:     { value: 1.0 },
         uCenterOffset:   { value: new Float32Array([0, 0]) },
         uZoom:           { value: 0.9 },
+        uScrollOffset:   { value: 0 },
         uMouse:          { value: new Float32Array([0, 0]) },
         uMouseRadius:    { value: 0.0 },
         uMouseStrength:  { value: 0.0 },
@@ -343,6 +355,18 @@ const Grainient: React.FC<GrainientProps> = ({
       m[0] = p.x;
       m[1] = p.y;
       (program.uniforms.uMouseStrength as { value: number }).value = mouseOn.current ? p.strength : 0;
+      // Read here rather than from a scroll listener: the loop already runs
+      // every frame, and a listener would only ever be setting the same value
+      // a little later.
+      //
+      // Negated, which is measured rather than reasoned about: gl_FragCoord
+      // counts from the bottom, so the offset that reads as "down" in the
+      // shader is "up" on screen. Unnegated and with the drift frozen, 300px
+      // of scroll moved the gradient 90px the wrong way — the right ratio,
+      // travelling against the content instead of with it.
+      const vh = Math.max(container.clientHeight, 1);
+      ;(program.uniforms.uScrollOffset as { value: number }).value =
+        -(window.scrollY / vh) * parallax.current;
       renderer.render({ scene: mesh });
       raf = requestAnimationFrame(loop);
     };
@@ -420,6 +444,7 @@ const Grainient: React.FC<GrainientProps> = ({
     u.uZoom.value           = zoom;
     u.uMouseRadius.value    = mouseRadius;
     mouseOn.current         = enableMouseInteraction;
+    parallax.current        = scrollParallax;
     u.uColor1.value         = new Float32Array(hexToRgb(color1));
     u.uColor2.value         = new Float32Array(hexToRgb(color2));
     u.uColor3.value         = new Float32Array(hexToRgb(color3));
@@ -429,7 +454,7 @@ const Grainient: React.FC<GrainientProps> = ({
     warpAmplitude, blendAngle, blendSoftness, rotationAmount, noiseScale,
     grainAmount, grainScale, grainAnimated, contrast, gamma, saturation,
     centerX, centerY, zoom, color1, color2, color3, lightMode,
-    enableMouseInteraction, mouseRadius
+    enableMouseInteraction, mouseRadius, scrollParallax
   ]);
 
 

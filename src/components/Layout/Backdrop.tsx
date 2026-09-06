@@ -12,6 +12,9 @@ import './backdrop.css'
  * render that instead of this and the old look is back, nothing else needs
  * touching.
  *
+ * It scrolls, at three tenths of the page's own speed, so the sheet reads as
+ * something travelling over it rather than as a window onto something pinned.
+ *
  * It reacts to the pointer: the gradient swells around it and leans toward the
  * accent within half a screen, and follows on a delay rather than tracking it
  * exactly. Not under `prefers-reduced-motion` — the whole thing is held on one
@@ -47,8 +50,8 @@ export function Backdrop() {
         color1={palette.color1}
         color2={palette.color2}
         color3={palette.color3}
-        /* A quarter faster than the 0.25 it was set at. */
-        timeSpeed={0.3125}
+        /* A quarter faster again, on top of the quarter before it. */
+        timeSpeed={0.390625}
         colorBalance={0}
         warpStrength={1}
         warpFrequency={5}
@@ -69,6 +72,7 @@ export function Backdrop() {
         zoom={0.9}
         enableMouseInteraction
         mouseRadius={0.5}
+        scrollParallax={0.3}
         paused={reducedMotion}
       />
       <div className="backdrop__scrim" />
