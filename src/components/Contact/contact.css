@@ -90,6 +90,33 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
+
+  /* Same entrance as anything carrying `data-reveal` — 22px down and
+     transparent, 900ms in and 540ms out — written in CSS because what brings
+     this block in is not its own position alone. See the note in Contact.tsx:
+     `data-shown` goes on when either this block or the form beside it reaches
+     the line. */
+  opacity: 0;
+  transform: translate3d(0, 1.375rem, 0);
+  transition:
+    opacity 540ms var(--ease-out),
+    transform 540ms var(--ease-out);
+}
+
+.contact__links[data-shown] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  transition-duration: 900ms;
+}
+
+/* Travel goes, the cross-fade stays, at the same 450ms cap `motionBudget` puts
+   on the hook's own tweens. */
+@media (prefers-reduced-motion: reduce) {
+  .contact__links,
+  .contact__links[data-shown] {
+    transform: none;
+    transition-duration: 450ms;
+  }
 }
 
 /* The equal-width tracks belong to the list items; without this the link

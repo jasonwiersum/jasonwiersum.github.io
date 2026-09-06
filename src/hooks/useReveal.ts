@@ -33,6 +33,19 @@ export const REVEAL_BAND = {
 } as const
 
 /**
+ * Whether the page has run out of scroll.
+ *
+ * The floor under both entrance lines. An element in the last screenful can sit
+ * below the show line with no way of rising above it — there is no more page —
+ * and would stay hidden for good; where the page ends, whatever is left is
+ * brought in. Shared with `useRevealed` so the two answers cannot differ.
+ */
+export function atDocumentEnd(): boolean {
+  const page = document.documentElement
+  return window.scrollY + window.innerHeight >= page.scrollHeight - 2
+}
+
+/**
  * Scroll-linked entrance and exit for a section.
  *
  * Any descendant carrying `data-reveal` fades and lifts into place as it comes
@@ -172,27 +185,18 @@ export function useReveal(
         hide.observe(target)
       })
 
-      // The floor of the document, where the entrance line stops working.
-      //
-      // An element in the last screenful can sit below that line with no way of
-      // rising above it — there is no more page to scroll — and would stay at
-      // opacity 0 for good. Raising the line to 75% brought this within reach
-      // of the real page: the deepest element measures 73% of the viewport on a
-      // 1440px-tall window, which is four percent of clearance.
-      //
-      // So the rule is that the bottom of the document reveals what is left.
-      // It is a floor and not a second entrance: it only ever brings elements
-      // in, only where the page has run out, and skips everything already here.
+      // The floor, applied to every target at once. Raising the show line to
+      // 75% brought it within reach of the real page: the deepest element
+      // measures 73% of the viewport on a 1440px-tall window, four percent of
+      // clearance. It is a floor and not a second entrance — it only ever
+      // brings elements in, only where the page has run out, and skips
+      // everything already here.
       let sweep = 0
-      const atEnd = () => {
-        const page = document.documentElement
-        return window.scrollY + window.innerHeight >= page.scrollHeight - 2
-      }
       const onScroll = () => {
         if (sweep) return
         sweep = requestAnimationFrame(() => {
           sweep = 0
-          if (!atEnd()) return
+          if (!atDocumentEnd()) return
           let queued = false
           for (const target of targets) {
             if (gsap.getProperty(target, 'opacity') === 1) continue

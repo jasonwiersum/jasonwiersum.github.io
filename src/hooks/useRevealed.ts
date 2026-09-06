@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { REVEAL_BAND } from './useReveal'
+import { atDocumentEnd, REVEAL_BAND } from './useReveal'
 
 /**
  * The same entrance and exit as `data-reveal`, reported as a boolean.
@@ -46,9 +46,31 @@ export function useRevealed(gate = true) {
     )
     show.observe(node)
     hide.observe(node)
+
+    // The same floor `useReveal` puts under its own targets: an element in the
+    // last screenful can sit below the show line with no page left to lift it
+    // above one. Only ever inwards, so the observers keep the last word on
+    // everything else.
+    let sweep = 0
+    const onScroll = () => {
+      if (sweep) return
+      sweep = requestAnimationFrame(() => {
+        sweep = 0
+        if (!atDocumentEnd()) return
+        const rect = node.getBoundingClientRect()
+        if (rect.bottom > 0 && rect.top < window.innerHeight) setInBand(true)
+      })
+    }
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+
     return () => {
       show.disconnect()
       hide.disconnect()
+      if (sweep) cancelAnimationFrame(sweep)
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
     }
   }, [node])
 
