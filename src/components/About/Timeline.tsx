@@ -142,15 +142,23 @@ export function Timeline() {
             data-shown={shown[index] || undefined}
             data-emphasis={milestone.emphasis || undefined}
           >
-            {/* The faint track this point's share of the line is drawn over.
-                One per point rather than one behind the whole list: the list
-                runs to the bottom of the LAST CARD, so a single track
-                overshot the last dot by the height of its text and left the
-                line trailing off into nothing. Per point, it ends where the
-                last dot is, because the last point does not get one. */}
+            {/* Every point carries one thing below its dot: a length of rail,
+                or — at the end of the line — the pulse.
+
+                The track is per point rather than one behind the whole list
+                because the list box runs to the bottom of the LAST CARD, so a
+                single track overshot the last dot by the height of its text
+                and left the line trailing off into nothing. Ending it one
+                point early is what makes it stop exactly on the last dot, and
+                it leaves that dot the only one with room for something else.
+
+                Decoration, so it is hidden from a screen reader: "the line is
+                still going" is a thing to look at, not to be told. */}
             {index < milestones.length - 1 ? (
               <span className="timeline__track" aria-hidden="true" />
-            ) : null}
+            ) : (
+              <span className="timeline__pulse" aria-hidden="true" />
+            )}
 
             <div className="timeline__card">
               <p className="timeline__period">{milestone.period}</p>

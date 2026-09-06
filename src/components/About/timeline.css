@@ -19,6 +19,11 @@
   /* The channel kept clear either side of the rail, so a card never runs up
      against its own dot. */
   --gutter: clamp(1.75rem, 4vw, 3.25rem);
+  /* How far the last point's pulse expands, as a multiple of the dot it comes
+     from. It has to die before it reaches the card's text, and the two layouts
+     do not give it the same room — see the narrow block at the foot of this
+     file. */
+  --pulse-scale: 3.2;
 
   margin-block-start: clamp(2.5rem, 6vw, 4.5rem);
 }
@@ -137,6 +142,64 @@
   box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
+/* The pulse on the last point.
+
+   The line ends on where Jason is now, and a ring leaves that dot every five
+   seconds and fades out on its way. It starts at exactly the emphasised dot's
+   size and carries the same 2px accent stroke, so what expands reads as that
+   dot's own edge coming away from it rather than as a second object appearing
+   underneath.
+
+   One eased interval for the visible part and a long flat tail: 0% to 28% of a
+   5s cycle is 1.4s of ring, then 3.6s of nothing. Splitting the fade and the
+   growth across more keyframes was tried first and each interval got its own
+   easing, which made the expansion arrive in steps — two keyframes is what
+   keeps it one movement.
+
+   How far it goes is `--pulse-scale`, and it is not the same on both layouts.
+   The ring has to die before it reaches the card's text, and measured on the
+   rendered page the two have very different room: wide, the widest moment of
+   the ring ends 26px clear of the card, while narrow the same 3.2 put it at
+   MINUS 1px — over the first letter — and 18px outside the block's own left
+   edge. The narrow value is set against that measurement rather than against
+   the arithmetic, which is what got it wrong the first time.
+
+   It runs only while the point is lit. `data-shown` comes off when the point
+   leaves the viewport, so this is not a transform animating for ever on
+   something nobody is looking at — and it starts again from the top when the
+   point is scrolled back to, which is the right place for it to start. */
+.timeline__pulse {
+  position: absolute;
+  left: var(--rail);
+  top: var(--dot-y);
+  width: calc(var(--dot) * 1.34);
+  height: calc(var(--dot) * 1.34);
+  border-radius: 50%;
+  border: 2px solid var(--accent);
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.timeline__item[data-shown] .timeline__pulse {
+  animation: timeline-pulse 5s var(--ease-out) infinite;
+}
+
+@keyframes timeline-pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.5;
+  }
+  28% {
+    transform: translate(-50%, -50%) scale(var(--pulse-scale));
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(var(--pulse-scale));
+    opacity: 0;
+  }
+}
+
 /* Where a point travels in from, as a custom property rather than a second
    transform.
 
@@ -242,6 +305,12 @@
        the block's edge instead of half a dot outside it. */
     --rail: 0.5rem;
     --gutter: 1.25rem;
+    /* 25px is all there is between the rail and the card's first letter here,
+       against the 200-odd the wide layout has. Measured at 3.2 the ring landed
+       1px INSIDE the text; 2.1 stops it 8px clear, and the ~9px it puts over
+       the block's left edge falls in the page's own margin, where there is
+       nothing to cover. */
+    --pulse-scale: 2.1;
   }
 
   .timeline__item {
@@ -287,6 +356,15 @@
    preference exists for — so it is simply there, faded in with its point.
    --------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
+  /* Off outright, not shortened. Everything else here is a one-shot entrance,
+     which the preference lets through as a cross-fade; this one repeats for as
+     long as the point is on screen, and a movement with no end is the case the
+     preference exists for. The dot it came from is still there and still
+     marks the end of the line. */
+  .timeline__item[data-shown] .timeline__pulse {
+    animation: none;
+  }
+
   .timeline__card {
     --from-x: 0rem;
     transform: none;
