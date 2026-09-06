@@ -32,9 +32,12 @@ const PHONE = '(max-width: 48rem)'
  * except under `prefers-reduced-motion`, where the scroll link is the one part
  * of this that the preference is for.
  *
- * It reacts to the pointer: the gradient swells around it and leans toward the
- * accent within half a screen, and follows on a delay rather than tracking it
- * exactly.
+ * It does not react to the pointer any more. The swell was built from a
+ * displacement along `normalize(cursor - pixel)`, and that direction is
+ * undefined where the two meet: every pixel around the cursor was pushed
+ * directly away from a single point, which draws a cone with a pinch at its
+ * tip rather than a soft lens. The shader keeps the capability — see
+ * `enableMouseInteraction` in Grainient — but nothing switches it on.
  *
  * The palette is the site's own. In light it runs from the page background up
  * to the accent, with the lighter accent as the tone between them; in dark it
@@ -80,8 +83,8 @@ export function Backdrop() {
         color1={palette.color1}
         color2={palette.color2}
         color3={palette.color3}
-        /* A quarter faster again, on top of the quarter before it. */
-        timeSpeed={0.390625}
+        /* A fifth slower than the 0.390625 it had been run up to. */
+        timeSpeed={0.3125}
         colorBalance={0}
         warpStrength={1}
         warpFrequency={5}
@@ -100,8 +103,6 @@ export function Backdrop() {
         centerX={0}
         centerY={0}
         zoom={0.9}
-        enableMouseInteraction
-        mouseRadius={0.5}
         /* The one thing here that is scroll-linked travel, and the one thing
            the preference is actually about. */
         scrollParallax={reducedMotion ? 0 : 0.3}
