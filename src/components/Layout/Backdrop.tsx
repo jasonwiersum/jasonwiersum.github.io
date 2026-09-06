@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Ambience } from './Ambience'
 import Grainient from './Grainient'
-import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import { useTheme } from '../../hooks/useTheme'
 import './backdrop.css'
 
@@ -27,11 +26,12 @@ const PHONE = '(max-width: 48rem)'
  * render that instead of this and the old look is back, nothing else needs
  * touching.
  *
- * It scrolls, at nine tenths of the page's own speed, so the sheet reads as
- * something travelling over it rather than as a window onto something pinned.
- * Under `prefers-reduced-motion` it still scrolls, at three tenths — the rate
- * this had before, kept as the quiet setting rather than switched off, because
- * off is indistinguishable from broken.
+ * It scrolls, at a quarter of the page's own speed, so the sheet reads as
+ * something travelling over a ground that is further away — four times as much
+ * travel in the front layer as in the back. The same rate whatever the
+ * reader's motion preference: a ground moving slower than the page is not the
+ * kind of movement that preference exists for, and a branch there only made it
+ * impossible to say what anyone was actually looking at.
  *
  * It does not react to the pointer any more. The swell was built from a
  * displacement along `normalize(cursor - pixel)`, and that direction is
@@ -61,7 +61,6 @@ const PALETTE = {
 
 export function Backdrop() {
   const { theme } = useTheme()
-  const reducedMotion = usePrefersReducedMotion()
   const palette = PALETTE[theme]
   // Reactive rather than read once: a tablet turned on its side crosses this,
   // and a WebGL context left running behind a static wash would be a phone's
@@ -104,21 +103,24 @@ export function Backdrop() {
         centerX={0}
         centerY={0}
         zoom={0.9}
-        /* Three times what it was. `uScrollOffset` is a shift of the shader's
-           sampling centre in UV, so 0.9 means a screenful of scrolling slides
-           the gradient by nine tenths of a screen through its own field — at
-           0.3 it moved, but under a page this tall the change across a whole
-           section was small enough to read as the same picture.
+        /* How fast the ground travels, as a fraction of the page's own speed.
+           This is the whole parallax: the sheet moves at 1, so anything under
+           1 here is the distance between the two layers, and the number IS the
+           effect rather than a strength dial.
 
-           No longer zero under `prefers-reduced-motion`, which is the fourth
-           time that gate has hidden a change from the person asking for it.
-           Zero is not "gentler", it is nothing at all, and a reader with the
-           preference on cannot tell a subdued backdrop from a broken one. What
-           they get instead is 0.3 — precisely the amount everyone had until
-           now, and an amount nobody described as excessive — so the preference
-           still buys a third of the travel rather than buying an unmoving
-           picture. */
-        scrollParallax={reducedMotion ? 0.3 : 0.9}
+           Measured on the rendered page with the drift frozen, so the only
+           thing moving was this: 800px of scroll moved the gradient 647px at
+           0.9 and 240px at 0.3. Eight tenths is not a layer behind the page,
+           it is the page — which is exactly how it read, everything descending
+           together. A quarter puts four times as much travel in the sheet as
+           in the ground, which is the gap that makes two layers legible.
+
+           One number for everyone, and the reason is that guessing which side
+           of a `prefers-reduced-motion` branch the reader is standing on has
+           now cost several rounds of this. A background at a quarter speed is
+           less movement than the page itself already has; there is nothing
+           here for a branch to protect anyone from. */
+        scrollParallax={0.25}
         /* Not paused under `prefers-reduced-motion`, which is a reversal: it
            used to be, and the result was a backdrop frozen dead for anyone with
            the OS setting on — measured, 0.000 of 255 over two and a half

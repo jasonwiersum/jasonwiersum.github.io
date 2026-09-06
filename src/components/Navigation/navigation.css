@@ -197,10 +197,10 @@
    already on the button and says which shape is currently drawn, so the rule
    reads it rather than needing a class of its own.
 
-   180deg and not 360: the gear is drawn with an even number of teeth, so half a
-   turn lands on the same silhouette it started from. What you see is the
-   movement, and it ends on a shape that is exactly as upright as the one it
-   left — a full turn would take twice as long to say the same thing.
+   A quarter turn. The gear has eight teeth, so 45deg is where it would land on
+   its own silhouette again and any multiple of that reads as upright — 90 is
+   two of those steps, enough to be clearly a turn and short enough to stay
+   crisp at 17px.
 
    Hover only, so a touch device never gets this stuck on after a tap: `:hover`
    there sticks until you touch something else, and a gear left rotated is a
@@ -209,7 +209,7 @@
    other. */
 @media (hover: hover) and (pointer: fine) {
   .settings__toggle[aria-expanded='false']:hover .settings__icon {
-    transform: rotate(180deg);
+    transform: rotate(90deg);
   }
 }
 

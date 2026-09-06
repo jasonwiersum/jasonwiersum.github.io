@@ -30,6 +30,18 @@ const PHONE = '(max-width: 48rem)'
 const REACH = { wide: 0.6, phone: 0.68 }
 
 /**
+ * How much of the grey track shows below the drawn line, in px: solid for the
+ * first `LEAD`, then fading out over `FADE`.
+ *
+ * The lead is roughly half the gap between two points, so what is visible is
+ * "the line continues" and not "here is the next thing". The fade is longer
+ * than the lead on purpose — a hard end to the grey would read as a second,
+ * shorter line rather than as the track running out of sight.
+ */
+const LEAD = 80
+const FADE = 180
+
+/**
  * The path, as points on one line that draws itself while you scroll.
  *
  * The line is a single element — one faint rail from the first dot to the last,
@@ -110,7 +122,14 @@ export function Timeline() {
       // reach line has passed it, and the first dot sits at zero — clamping
       // first would make that comparison true while the whole block was still
       // below the fold.
-      fillEl.style.height = `${Math.min(Math.max(reach, 0), rect.height)}px`
+      const drawn = Math.min(Math.max(reach, 0), rect.height)
+      fillEl.style.height = `${drawn}px`
+      // The grey track's window, following the head of the fill. See the mask
+      // in timeline.css: solid to the first number, gone by the second, so what
+      // is on screen is a short lead of track below the line rather than the
+      // whole path laid out in advance.
+      railEl.style.setProperty('--rail-seen', `${drawn + LEAD}px`)
+      railEl.style.setProperty('--rail-fade', `${drawn + LEAD + FADE}px`)
       setShown((previous) => {
         let changed = false
         const next = dots.map((offset, index) => {
