@@ -404,10 +404,11 @@ p {
     margin-block: 0;
     border-inline: 0;
     border-radius: 0;
-    /* And a heavier surface. On a phone the sheet is the whole screen, so
-       whatever it lets through is the background everywhere rather than a
-       margin around the edges — the desktop's 0.72 puts the gradient behind
-       the text from corner to corner. */
-    background: var(--sheet-surface-phone);
+    /* And no paint of its own. The surface it used to carry now lives on the
+       fixed backdrop instead — see backdrop.css. The sheet scrolls with the
+       document, so at the top and bottom of a rubber-band scroll it pulled
+       away from the edge of the screen and left the raw gradient showing in
+       the gap; the layer that replaces it cannot, because it never moves. */
+    background: none;
   }
 }

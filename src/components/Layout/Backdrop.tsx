@@ -47,7 +47,8 @@ export function Backdrop() {
         color1={palette.color1}
         color2={palette.color2}
         color3={palette.color3}
-        timeSpeed={0.25}
+        /* A quarter faster than the 0.25 it was set at. */
+        timeSpeed={0.3125}
         colorBalance={0}
         warpStrength={1}
         warpFrequency={5}
