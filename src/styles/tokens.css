@@ -171,6 +171,16 @@
   --backdrop-scrim: 0.22;
   --glow-a: rgba(0, 56, 255, 0.14);
   --glow-b: rgba(255, 138, 76, 0.1);
+  /* The static wash's own pair, separate from the two above only because those
+     also draw the hero's loading placeholder, which was not asked to change.
+     Same colours and same construction — the alphas are what moved.
+
+     One lever runs the right way in both themes. The inner glow is the accent,
+     which in light is darker than the page and in dark is lighter than it, so
+     raising it darkens the light centre, lightens the dark one, and pulls both
+     further from grey. */
+  --wash-a: rgba(0, 56, 255, 0.18);
+  --wash-b: rgba(255, 138, 76, 0.08);
 
   color-scheme: light;
 }
@@ -309,6 +319,8 @@
   --backdrop-scrim: 0.34;
   --glow-a: rgba(91, 132, 255, 0.16);
   --glow-b: rgba(255, 138, 76, 0.08);
+  --wash-a: rgba(91, 132, 255, 0.28);
+  --wash-b: rgba(255, 138, 76, 0.06);
 
   color-scheme: dark;
 }
