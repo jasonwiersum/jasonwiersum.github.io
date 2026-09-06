@@ -60,11 +60,15 @@ export const milestones: Milestone[] = [
     label: {
       es: 'Terminé la secundaria',
       en: 'Finished secondary school',
-      de: 'Mittlere Reife abgeschlossen',
+      de: 'Mittlere Reife',
     },
     // Not in the CV, which starts the education section at 2008. Jason's own.
     place: 'Colegio Ecos, Málaga',
-    detail: { es: 'A los 16', en: 'At 16', de: 'Mit 16' },
+    // No detail line. It said "at 16", and the age is already in the two
+    // numbers either side of it — 1992 at the top of the line and 2008 on this
+    // point. Dropped in all three languages rather than only the German it was
+    // raised on: the same sentence in the other two would still be the same
+    // arithmetic written out.
   },
   {
     id: 'abitur',
@@ -76,7 +80,7 @@ export const milestones: Milestone[] = [
     },
     // CV: "2008 - 2010 Gymnasium, I.E.S. La Cala de Mijas, Abschluss: Abitur".
     place: 'I.E.S. La Cala de Mijas, Málaga',
-    detail: { es: 'A los 18', en: 'At 18', de: 'Mit 18' },
+    // No detail line, for the reason the point above gives.
   },
   {
     id: 'university',
@@ -133,17 +137,20 @@ export const milestones: Milestone[] = [
     // Four months, nested inside both the degree and Brigada Socorrista above
     // it. The period is the bare year rather than a range, because a range of
     // one year would sit between two reading "2010 – 2012" and read as a third
-    // overlapping block rather than as the short job it was; the detail line
-    // carries the length instead.
+    // overlapping block rather than as the short job it was.
+    //
+    // How short it was is no longer said out loud — "four months" opened the
+    // detail line and has been dropped. The CV is one button away and carries
+    // 09/2011 - 12/2011; the line above it only has to say what the job was.
     //
     // "im Vertrieb" in German and "de venta" in Spanish so it is not word for
     // word the Merkur point further down, which is the same job title five
     // years later. The CV distinguishes them by their duties, and so does this.
     place: 'Athena Marketing S.L., Málaga',
     detail: {
-      es: 'Cuatro meses, en paralelo a los estudios. Tramitación y registro de datos.',
-      en: 'Four months, alongside the degree. Case handling and data entry.',
-      de: 'Vier Monate, parallel zum Studium. Sachbearbeitung und Datenerfassung.',
+      es: 'En paralelo a los estudios. Tramitación y registro de datos en proyectos de venta.',
+      en: 'Alongside the degree. Case handling and data entry on sales projects.',
+      de: 'Parallel zum Studium. Sachbearbeitung und Datenerfassung im Vertrieb.',
     },
   },
   {

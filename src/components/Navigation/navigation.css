@@ -186,6 +186,31 @@
 .settings__icon {
   display: block;
   color: var(--foreground);
+  transition: transform 620ms var(--ease-out);
+}
+
+/* A gear under the pointer turns half a turn, clockwise, and stays there while
+   the pointer is on it.
+
+   Only the gear. When the island is open the same node is a chevron, and half a
+   turn of a chevron is an arrow pointing the wrong way — `aria-expanded` is
+   already on the button and says which shape is currently drawn, so the rule
+   reads it rather than needing a class of its own.
+
+   180deg and not 360: the gear is drawn with an even number of teeth, so half a
+   turn lands on the same silhouette it started from. What you see is the
+   movement, and it ends on a shape that is exactly as upright as the one it
+   left — a full turn would take twice as long to say the same thing.
+
+   Hover only, so a touch device never gets this stuck on after a tap: `:hover`
+   there sticks until you touch something else, and a gear left rotated is a
+   gear that looks broken. The transform is on the icon, never on the button —
+   the button carries a GSAP `x` on a phone and the two would overwrite each
+   other. */
+@media (hover: hover) and (pointer: fine) {
+  .settings__toggle[aria-expanded='false']:hover .settings__icon {
+    transform: rotate(180deg);
+  }
 }
 
 .island--lang {

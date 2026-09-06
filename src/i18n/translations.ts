@@ -334,7 +334,7 @@ const de: Translation = {
     ],
     tagline: 'Verstehen. Entwickeln. Verbessern.',
     portraitAlt: 'Jason Wiersum',
-    cvIntro: 'Wenn Sie den vollständigen beruflichen Werdegang sehen möchten, können Sie den Lebenslauf hier ansehen oder herunterladen.',
+    cvIntro: 'Wenn du den vollständigen beruflichen Werdegang sehen möchtest, kannst du den Lebenslauf hier ansehen oder herunterladen.',
     cvView: 'Lebenslauf ansehen',
     cv: 'Lebenslauf herunterladen',
     cvTitle: 'Lebenslauf',

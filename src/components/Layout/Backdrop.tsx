@@ -27,10 +27,11 @@ const PHONE = '(max-width: 48rem)'
  * render that instead of this and the old look is back, nothing else needs
  * touching.
  *
- * It scrolls, at three tenths of the page's own speed, so the sheet reads as
- * something travelling over it rather than as a window onto something pinned —
- * except under `prefers-reduced-motion`, where the scroll link is the one part
- * of this that the preference is for.
+ * It scrolls, at nine tenths of the page's own speed, so the sheet reads as
+ * something travelling over it rather than as a window onto something pinned.
+ * Under `prefers-reduced-motion` it still scrolls, at three tenths — the rate
+ * this had before, kept as the quiet setting rather than switched off, because
+ * off is indistinguishable from broken.
  *
  * It does not react to the pointer any more. The swell was built from a
  * displacement along `normalize(cursor - pixel)`, and that direction is
@@ -103,9 +104,21 @@ export function Backdrop() {
         centerX={0}
         centerY={0}
         zoom={0.9}
-        /* The one thing here that is scroll-linked travel, and the one thing
-           the preference is actually about. */
-        scrollParallax={reducedMotion ? 0 : 0.3}
+        /* Three times what it was. `uScrollOffset` is a shift of the shader's
+           sampling centre in UV, so 0.9 means a screenful of scrolling slides
+           the gradient by nine tenths of a screen through its own field — at
+           0.3 it moved, but under a page this tall the change across a whole
+           section was small enough to read as the same picture.
+
+           No longer zero under `prefers-reduced-motion`, which is the fourth
+           time that gate has hidden a change from the person asking for it.
+           Zero is not "gentler", it is nothing at all, and a reader with the
+           preference on cannot tell a subdued backdrop from a broken one. What
+           they get instead is 0.3 — precisely the amount everyone had until
+           now, and an amount nobody described as excessive — so the preference
+           still buys a third of the travel rather than buying an unmoving
+           picture. */
+        scrollParallax={reducedMotion ? 0.3 : 0.9}
         /* Not paused under `prefers-reduced-motion`, which is a reversal: it
            used to be, and the result was a backdrop frozen dead for anyone with
            the OS setting on — measured, 0.000 of 255 over two and a half

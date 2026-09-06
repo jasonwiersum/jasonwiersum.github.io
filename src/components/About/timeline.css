@@ -1,9 +1,16 @@
 /* ===========================================================================
-   The path — points on a line that draws itself while you scroll
+   The path — points on one line that draws itself while you scroll
    ---------------------------------------------------------------------------
    Every value here comes from tokens.css. The one thing this file owns is the
-   geometry of the rail, which is held in three custom properties so the wide
-   layout and the narrow one differ by where the rail sits and nothing else.
+   geometry of the rail, which is held in a handful of custom properties so the
+   wide layout and the narrow one differ by where the rail sits and nothing
+   else.
+
+   The line is ONE line. It was a segment per point until it was looked at on a
+   real page: the segments met at each dot, every dot wore an opaque ring to
+   lift it off the rail, and nine short strokes with beads between them is not
+   a line — see `.timeline__rail` and `.timeline__item::after` below, which are
+   the two halves of that fix.
    =========================================================================== */
 
 .timeline {
@@ -41,30 +48,59 @@
   margin-block-end: clamp(1.75rem, 4vw, 2.75rem);
 }
 
-.timeline__list {
+/* Holds the rail, its fill and the list. It exists because the first two
+   cannot live inside the `<ol>` — that element takes list items and nothing
+   else — and they have to share a positioning box with the points so a dot's
+   `offsetTop` and the rail's height are measured against the same origin. */
+.timeline__rail-wrap {
   position: relative;
+}
+
+.timeline__list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-/* The track the drawn line travels along, faint and always there — without it
-   the line would appear to be creating the rail rather than moving down one
-   that already exists.
+/* The rail and the line drawn along it: same geometry, one behind the other.
+   Both start at the first dot and stop on the last, which is what `--last-h`
+   buys — the block runs to the foot of the last CARD, so a rail as tall as the
+   block overshot the final dot by the height of that card's text and left the
+   line trailing off into nothing. Subtracting the whole last item lands it
+   exactly on that item's own dot. Timeline.tsx measures the one number.
 
-   Same geometry as the drawn segment below, and it is placed per point for the
-   same reason the segment is: the list box runs to the bottom of the last
-   CARD, so one track behind the whole list overshot the last dot by the height
-   of its text. */
-.timeline__track {
+   They come before the list in the markup, so every dot and every card paints
+   over them without a z-index having to say so. */
+.timeline__rail,
+.timeline__fill {
   position: absolute;
   left: var(--rail);
   top: var(--dot-y);
-  height: calc(100% - var(--dot-y));
   width: var(--rail-w);
   transform: translateX(-50%);
-  background: var(--border);
   border-radius: var(--radius-pill);
+  pointer-events: none;
+}
+
+/* Faint and always there. Without it the fill would appear to be creating the
+   rail rather than travelling down one that already exists. */
+.timeline__rail {
+  height: calc(100% - var(--last-h, 0px));
+  background: var(--border);
+}
+
+/* The drawn line. Its height is set from the scroll position on every frame —
+   see Timeline.tsx — so it is genuinely tied to the reader's thumb rather than
+   playing a transition on its own clock once a trigger has fired.
+
+   No transition on `height` on purpose. Scroll already arrives once a frame,
+   and easing on top of it would put the head of the line behind the point that
+   has just lit.
+
+   Solid, not a gradient. Fading it towards its own head looked like a comet. */
+.timeline__fill {
+  height: 0;
+  background: var(--accent);
 }
 
 .timeline__item {
@@ -84,39 +120,15 @@
   padding-block-end: 0;
 }
 
-/* The drawn segment: this point's share of the rail, from its own dot down to
-   the next one. It scales from the top, so the line grows downwards into the
-   point below — the direction the reader is travelling.
+/* The dot, sitting on top of the line rather than in a hole cut out of it.
+   Scaled from nothing on a spring.
 
-   One segment per point rather than a single bar scaled against scroll
-   position: the scroll position of this section is already being scrubbed by
-   useSectionTransitions, and a second thing reading it would have to agree
-   with the first. A segment per point needs no scroll position at all. */
-.timeline__item::before {
-  content: '';
-  position: absolute;
-  left: var(--rail);
-  top: var(--dot-y);
-  height: calc(100% - var(--dot-y));
-  width: var(--rail-w);
-  transform: translateX(-50%) scaleY(0);
-  transform-origin: top center;
-  /* Solid, not a gradient. Fading each segment towards its own foot looked
-     like a comet on one point and like a dashed rail on eight: every segment
-     arrived at the next dot at 35% and started again at full, so the line read
-     as broken between points rather than as one line reaching them. */
-  background: var(--accent);
-  border-radius: var(--radius-pill);
-  transition: transform 620ms var(--ease-out) 160ms;
-}
-
-.timeline__item:last-child::before {
-  content: none;
-}
-
-/* The dot. Scaled from nothing on a spring, with the accent ring around it
-   opening at the same time — see the box-shadow below, which is two rings and
-   not a glow: a blur here would smear over the rail it sits on. */
+   No opaque ring. It used to carry `0 0 0 3px var(--background-elevated)` to
+   separate it from the rail, and that ring is exactly what broke the line into
+   pieces: three solid pixels of page colour above and below every dot. What is
+   left is the accent halo, which is transparent, so the line runs on behind it
+   and the dot reads as a bead on a string. The dot is six times the rail's
+   width — that is all the separation it needs. */
 .timeline__item::after {
   content: '';
   position: absolute;
@@ -127,8 +139,8 @@
   transform: translate(-50%, -50%) scale(0);
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 3px var(--background-elevated), 0 0 0 5px var(--accent-soft);
-  transition: transform 520ms var(--ease-spring);
+  box-shadow: 0 0 0 5px var(--accent-soft);
+  transition: transform 560ms var(--ease-spring);
 }
 
 /* The two ends of the line are drawn heavier — the point you start from and
@@ -164,10 +176,10 @@
    edge. The narrow value is set against that measurement rather than against
    the arithmetic, which is what got it wrong the first time.
 
-   It runs only while the point is lit. `data-shown` comes off when the point
-   leaves the viewport, so this is not a transform animating for ever on
-   something nobody is looking at — and it starts again from the top when the
-   point is scrolled back to, which is the right place for it to start. */
+   It runs only while the point is lit. `data-shown` comes off when the line
+   retreats past it, so this is not a transform animating for ever on something
+   nobody is looking at — and it starts again from the top when the point is
+   scrolled back to, which is the right place for it to start. */
 .timeline__pulse {
   position: absolute;
   left: var(--rail);
@@ -208,24 +220,30 @@
    layout — where it is written a third time — that rule won: right-hand points
    arrived and then stayed 20px off, indented past their neighbours. One
    property, set per side and per breakpoint, cannot drift like that, because
-   only one rule ever declares `transform`. */
+   only one rule ever declares `transform`.
+
+   Slower and shorter than it was — 820ms over 1.5rem, against 620 over 2 —
+   and with no delay in front of it. The delay existed to let the old segment
+   draw first; now the line arrives at the dot at the same instant the card is
+   told to appear, because they are the same comparison, and the card simply
+   takes its time about it. */
 .timeline__card {
   /* Column 1 or 3, never the middle: the middle is the rail's channel. */
   grid-column: 1;
-  --from-x: -2rem;
+  --from-x: -1.5rem;
   opacity: 0;
   /* Away from the rail, so a point arrives from its own side. The `y` is
      small and shared, so the two sides still read as one sequence rather than
      two columns doing separate things. */
-  transform: translate3d(var(--from-x), 0.75rem, 0);
+  transform: translate3d(var(--from-x), 0.6rem, 0);
   transition:
-    opacity 620ms var(--ease-out) 220ms,
-    transform 620ms var(--ease-out) 220ms;
+    opacity 820ms var(--ease-out),
+    transform 820ms var(--ease-out);
 }
 
 .timeline__item[data-side='right'] .timeline__card {
   grid-column: 3;
-  --from-x: 2rem;
+  --from-x: 1.5rem;
 }
 
 /* Right-aligned into the rail on the left-hand side, so both columns of text
@@ -237,10 +255,6 @@
 .timeline__item[data-shown] .timeline__card {
   opacity: 1;
   transform: translate3d(0, 0, 0);
-}
-
-.timeline__item[data-shown]::before {
-  transform: translateX(-50%) scaleY(1);
 }
 
 .timeline__item[data-shown]::after {
@@ -325,7 +339,7 @@
   .timeline__item[data-side='right'] .timeline__card {
     grid-column: 1;
     text-align: left;
-    --from-x: 1.25rem;
+    --from-x: 1rem;
   }
 
   .timeline__item[data-side='left'] .timeline__label,
@@ -351,40 +365,33 @@
    failed to load, and the preference is about movement, not about content
    arriving.
 
-   The rail is the one thing that stops moving outright — it is a 600px stroke
-   travelling down the page, which is exactly the scale of movement the
-   preference exists for — so it is simply there, faded in with its point.
+   Two things that used to be switched off here are not any more, and both were
+   switched off for the same wrong reason — the preference was read as "show
+   less" when what it means is "move less over distance".
+
+   The line still draws. It is two pixels wide, it grows in place, and it never
+   travels across the page; what it replaced under this preference was a rail
+   that was simply already complete, which tells the reader nothing about where
+   they are. The pulse still runs, for the same reason and one more: it was
+   asked for by name after being seen on a device that did not have this
+   preference set, and a ring the size of a fingernail breathing once every
+   five seconds is not what anyone turns this setting on to escape.
+
+   What does go is the card's travel — 24px of horizontal movement on nine
+   blocks of text, which is the one thing here at the scale the preference is
+   for. It becomes a straight fade.
    --------------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  /* Off outright, not shortened. Everything else here is a one-shot entrance,
-     which the preference lets through as a cross-fade; this one repeats for as
-     long as the point is on screen, and a movement with no end is the case the
-     preference exists for. The dot it came from is still there and still
-     marks the end of the line. */
-  .timeline__item[data-shown] .timeline__pulse {
-    animation: none;
-  }
-
   .timeline__card {
     --from-x: 0rem;
     transform: none;
-    transition: opacity 400ms var(--ease-out) 60ms;
-  }
-
-  .timeline__item::before {
-    transform: translateX(-50%) scaleY(1);
-    opacity: 0;
-    transition: opacity 400ms var(--ease-out);
-  }
-
-  .timeline__item[data-shown]::before {
-    opacity: 1;
+    transition: opacity 520ms var(--ease-out);
   }
 
   .timeline__item::after {
     transform: translate(-50%, -50%) scale(1);
     opacity: 0;
-    transition: opacity 400ms var(--ease-out);
+    transition: opacity 420ms var(--ease-out);
   }
 
   .timeline__item[data-shown]::after {
