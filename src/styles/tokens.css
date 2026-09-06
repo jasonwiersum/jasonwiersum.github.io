@@ -272,9 +272,18 @@
   --background: #0b0c10;
   --background-elevated: #111219;
   --foreground: #eceef3;
-  --muted: #9a9dab;
+  /* Lighter than they were, and the reason is the backdrop rather than taste.
+     The sheet is translucent, so what sits behind the text is the gradient, and
+     over the contact section — where the accent end of it shows through — the
+     ground measures (17, 29, 177) rather than the (17, 17, 18) of the about
+     section. Against that worst ground the old values were 4.24:1 for --muted
+     and 2.36:1 for --faint, which on 11px and 13px labels is not a reading of
+     "quiet", it is a failure. These measure 5.48 and 4.50 there, and 9.04 and
+     7.41 over the darker sections. The step between the two is kept, so the
+     hierarchy reads as it did — both ends simply moved up. */
+  --muted: #b1b3be;
   --muted-strong: #c3c6d2;
-  --faint: #6e717f;
+  --faint: #a0a2ab;
   /* Lighter than --faint, which measured 3.5:1 against the dark field and read
      as disabled rather than as a prompt. Not as far as --muted: at 6.4:1 it
      stops looking like a placeholder and starts looking like a filled-in
