@@ -3,6 +3,31 @@ import { milestones } from '../../data/timeline'
 import { useLanguage } from '../../hooks/useLanguage'
 import './timeline.css'
 
+/** The line the layout changes on — timeline.css uses the same number, so the
+ *  rail moving to the left edge and the trigger moving up the screen happen
+ *  together rather than at two different widths. */
+const PHONE = '(max-width: 48rem)'
+
+/**
+ * How far into the viewport a point has to be before it lights, as an inset on
+ * the bottom of the observer's box.
+ *
+ * A phone waits far longer than a desktop, and the reason is the shape of the
+ * layout rather than the size of the screen. Wide, the points alternate and
+ * each one owns a row about 180px tall, so at most two are ever near the fold
+ * and 12% is enough to make them arrive one at a time. Narrow, the same points
+ * stack into a single column roughly 140px each in an 844px viewport — five of
+ * them fit on screen at once, and at 12% a normal flick brought three or four
+ * across the line in the same tick. They all lit together, which is the thing
+ * that read as abrupt: the line was not drawing, it was flashing.
+ *
+ * 32% puts the trigger at roughly two thirds down instead of just above the
+ * fold. A point is then well inside the screen before it appears, so the
+ * reader scrolls it into place and it lights under the thumb rather than
+ * having gone off ahead of them.
+ */
+const TRIGGER = { wide: '-12%', phone: '-32%' }
+
 /**
  * The path, as points on a line that draws itself while you scroll.
  *
@@ -31,6 +56,19 @@ export function Timeline() {
    *  not necessarily arrive in order — a page loaded halfway down, or a fast
    *  scroll that skips several in one tick, brings them in together. */
   const [shown, setShown] = useState<boolean[]>(() => milestones.map(() => false))
+  /** Reactive rather than read once: a phone turned on its side crosses this,
+   *  and the observers below have to be rebuilt when it does — a rootMargin
+   *  cannot be changed on an observer that already exists. */
+  const [phone, setPhone] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(PHONE).matches,
+  )
+
+  useEffect(() => {
+    const media = window.matchMedia(PHONE)
+    const onChange = (event: MediaQueryListEvent) => setPhone(event.matches)
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
 
   useEffect(() => {
     const node = list.current
@@ -43,9 +81,10 @@ export function Timeline() {
     // disappear, so anyone stopped exactly on one edge does not get a point
     // flickering on and off a pixel either way.
     //
-    // -12% at the bottom is what makes the line arrive rather than being
+    // The inset at the bottom is what makes the line arrive rather than being
     // already there: a point lights when it is properly into the viewport, not
-    // the instant its first pixel crosses the fold.
+    // the instant its first pixel crosses the fold. See TRIGGER for why a
+    // phone waits more than twice as long as a desktop.
     const show = new IntersectionObserver(
       (entries) => {
         const reached = entries.filter((entry) => entry.isIntersecting)
@@ -56,7 +95,7 @@ export function Timeline() {
           return next
         })
       },
-      { rootMargin: '0px 0px -12% 0px', threshold: 0.01 },
+      { rootMargin: `0px 0px ${phone ? TRIGGER.phone : TRIGGER.wide} 0px`, threshold: 0.01 },
     )
 
     const hide = new IntersectionObserver(
@@ -80,7 +119,7 @@ export function Timeline() {
       show.disconnect()
       hide.disconnect()
     }
-  }, [])
+  }, [phone])
 
   return (
     <section className="timeline">

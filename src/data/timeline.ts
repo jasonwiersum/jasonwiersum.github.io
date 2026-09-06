@@ -120,6 +120,33 @@ export const milestones: Milestone[] = [
     },
   },
   {
+    id: 'athena',
+    period: '2011',
+    label: {
+      es: 'Administrativo en proyectos de venta',
+      en: 'Administrator on sales projects',
+      de: 'Kaufmännischer Angestellter im Vertrieb',
+    },
+    // CV: "09/2011 - 12/2011 Kaufmännischer Angestellter, Athena Marketing
+    // S.L., Malaga — Sachbearbeitung und Datenerfassung in Vertriebsprojekten."
+    //
+    // Four months, nested inside both the degree and Brigada Socorrista above
+    // it. The period is the bare year rather than a range, because a range of
+    // one year would sit between two reading "2010 – 2012" and read as a third
+    // overlapping block rather than as the short job it was; the detail line
+    // carries the length instead.
+    //
+    // "im Vertrieb" in German and "de venta" in Spanish so it is not word for
+    // word the Merkur point further down, which is the same job title five
+    // years later. The CV distinguishes them by their duties, and so does this.
+    place: 'Athena Marketing S.L., Málaga',
+    detail: {
+      es: 'Cuatro meses, en paralelo a los estudios. Tramitación y registro de datos.',
+      en: 'Four months, alongside the degree. Case handling and data entry.',
+      de: 'Vier Monate, parallel zum Studium. Sachbearbeitung und Datenerfassung.',
+    },
+  },
+  {
     id: 'gastronomy',
     period: '2012 – 2015',
     label: {
