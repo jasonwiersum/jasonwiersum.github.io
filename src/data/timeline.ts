@@ -95,6 +95,31 @@ export const milestones: Milestone[] = [
     },
   },
   {
+    id: 'brigada',
+    period: '2010 – 2012',
+    label: {
+      es: 'Fundé y dirigí mi propia empresa',
+      en: 'Founded and ran my own company',
+      de: 'Eigenes Unternehmen gegründet und geführt',
+    },
+    // CV: "06/2010 - 10/2012 Geschäftsführer, Brigada Socorrista S.L., Malaga
+    // — Aufbau und operative Leitung eines saisonalen Dienstleistungsbetriebs
+    // für Rettungsschwimmer. Personalmanagement, Einsatzplanung und
+    // Lohnabrechnung."
+    //
+    // It runs alongside the degree above rather than after it, which is why
+    // both carry the same years, and why the detail says so: two identical
+    // periods one under the other read as a duplicated row otherwise. It sits
+    // second of the two because the About prose upstairs puts them in that
+    // order — "estudié en Málaga, dirigí una empresa".
+    place: 'Brigada Socorrista S.L., Málaga',
+    detail: {
+      es: 'En paralelo a los estudios. Socorrismo de temporada: personal, turnos y nóminas.',
+      en: 'Alongside the degree. Seasonal lifeguard services: staffing, rotas and payroll.',
+      de: 'Parallel zum Studium. Saisonaler Rettungsschwimmerdienst: Personal, Einsatzplanung und Lohnabrechnung.',
+    },
+  },
+  {
     id: 'gastronomy',
     period: '2012 – 2015',
     label: {
