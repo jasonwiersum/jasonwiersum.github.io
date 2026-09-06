@@ -96,6 +96,12 @@ export const LAYOUT = {
  * Was 10-15. At a 5.9s take that put the character in motion about a third of
  * the time; at 7-11 it is closer to two fifths, which is the same rhythm with
  * less waiting in it.
+ *
+ * The rest is spent on the take that just finished, and the dissolve to the
+ * next one is scheduled for its last CLIP_FADE, so the fade lands as the next
+ * take begins. Keep this comfortably above CLIP_FADE: the dissolve is clamped
+ * to start no earlier than the rest does, so a rest shorter than a fade turns
+ * into a clip fading in while it is already playing.
  */
 export const IDLE_REST = {
   min: 7,
