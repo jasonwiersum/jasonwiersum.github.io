@@ -1,7 +1,26 @@
+import { useGSAP } from '@gsap/react'
+import gsap from 'gsap'
 import { useEffect, useRef, useState } from 'react'
 import { milestones } from '../../data/timeline'
 import { useLanguage } from '../../hooks/useLanguage'
+import { motionBudget } from '../../hooks/usePrefersReducedMotion'
 import './timeline.css'
+
+gsap.registerPlugin(useGSAP)
+
+/**
+ * The first dot's own arrival: it grows into place instead of simply being
+ * there.
+ *
+ * Only the first. The other nine are reached by a line that is already drawn
+ * and moving, so they are punctuation on something in motion; the first has
+ * nothing before it, and popping into existence is what read as abrupt.
+ *
+ * Slightly past its size and back — `back.out` — because a dot that eases to
+ * exactly 1 and stops reads as a fade, not as something arriving. The overshoot
+ * is small and the whole thing is over in half a second.
+ */
+const FIRST_DOT = { duration: 0.52, ease: 'back.out(2)' }
 
 /** The line the layout changes on — timeline.css uses the same number, so the
  *  rail moving to the left edge and the line drawing later happen together
@@ -118,6 +137,44 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
     onComplete?.(last)
   }, [last, onComplete])
 
+  /**
+   * The first dot growing into place, on GSAP rather than on the transition the
+   * other nine use.
+   *
+   * It animates a custom property, not the element: the dot is a pseudo-element
+   * (see timeline.css) and there is nothing there for a tween to hold. The
+   * stylesheet reads `--dot-scale` for the first point alone, so this drives it
+   * without the other nine noticing.
+   *
+   * `fromTo` rather than `to`, because scrolling back up and down again has to
+   * replay it — a `to` from a value already at 1 would do nothing the second
+   * time. Under `prefers-reduced-motion` it is set rather than tweened: growth
+   * is travel, which is the thing that preference is about, and the dot still
+   * has the card's own cross-fade arriving beside it.
+   */
+  const firstShown = shown[0] ?? false
+  useGSAP(
+    () => {
+      const item = wrap.current?.querySelector<HTMLLIElement>('.timeline__item')
+      if (!item) return
+      const budget = motionBudget()
+      if (!firstShown) {
+        gsap.set(item, { '--dot-scale': 0 })
+        return
+      }
+      if (budget.reduced) {
+        gsap.set(item, { '--dot-scale': 1 })
+        return
+      }
+      gsap.fromTo(
+        item,
+        { '--dot-scale': 0 },
+        { '--dot-scale': 1, duration: FIRST_DOT.duration, ease: FIRST_DOT.ease },
+      )
+    },
+    { dependencies: [firstShown] },
+  )
+
   useEffect(() => {
     const media = window.matchMedia(PHONE)
     const onChange = (event: MediaQueryListEvent) => setPhone(event.matches)
@@ -170,8 +227,17 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
       // in timeline.css: solid to the first number, gone by the second, so what
       // is on screen is a short lead of track below the line rather than the
       // whole path laid out in advance.
-      railEl.style.setProperty('--rail-seen', `${height + LEAD}px`)
-      railEl.style.setProperty('--rail-fade', `${height + LEAD + FADE}px`)
+      //
+      // Nothing at all until the line has reached the first dot. `height` is
+      // clamped at 0 while the block is still below the fold, so the window was
+      // sitting at a flat LEAD there and 80px of grey track hung in the section
+      // ahead of any point existing — a line with nothing on it. The lead is
+      // worth having between points; it is not worth having before the first
+      // one. `drawn` rather than `height` decides, because that is the
+      // unclamped value and the first dot sits at zero.
+      const lead = drawn < 0 ? 0 : LEAD
+      railEl.style.setProperty('--rail-seen', `${height + lead}px`)
+      railEl.style.setProperty('--rail-fade', `${height + lead + (lead && FADE)}px`)
       // Read off the same value the fill is drawn from, so a point cannot light
       // before the line visibly reaches it — the smoothing carries the cards
       // with it rather than running ahead of the line.
