@@ -305,6 +305,20 @@
   transform: translate(-50%, -50%) scale(1);
 }
 
+/* The first point is driven by GSAP instead of by the transition above — see
+   Timeline.tsx. It is the only one with nothing before it, so it grows into
+   place rather than appearing at full size.
+
+   The transition has to go with it, or the two would fight over the same
+   transform: the tween writes a new scale every frame and a transition would
+   then chase each of those, which is a smooth curve run through a second smooth
+   curve and reads as lag. Placed after the `[data-shown]` rule so it wins on
+   order, both selectors being the same weight. */
+.timeline__item:first-child::after {
+  transform: translate(-50%, -50%) scale(var(--dot-scale, 0));
+  transition: none;
+}
+
 .timeline__period {
   font-family: var(--font-mono);
   font-size: var(--text-xs);

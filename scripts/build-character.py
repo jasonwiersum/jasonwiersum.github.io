@@ -350,7 +350,29 @@ def main():
         lo, hi = g.min(0), g.max(0)
         mid, half = (lo + hi) / 2, (hi - lo) / 2
         norm_all = (g - mid) / half
-        norm_all[:, 1] *= -1      # image y grows downward; up should be +1
+        # Both axes are negated, and the reason is empirical rather than
+        # derived: the frames this measurement calls the extremes are the
+        # opposite ones. Rendered large, the frame it scored at x=+1.00
+        # ("looking right") has the head turned and the pupils toward the
+        # viewer's LEFT, and the one at x=-1.00 has them right; live, both axes
+        # tracked backwards.
+        #
+        # The mechanism is that this character looks with its HEAD, not its
+        # eyes. Measured over the clip, the pupils travel 146.5px and the brows
+        # 146.0px — they move as one — while the iris-inside-a-brow-anchored-box
+        # residual this reads travels only 25.7px. So what is being measured is
+        # a small counter-rotation of the eye against a head that has already
+        # gone further, and it runs the other way.
+        #
+        # Two attempts to settle the sign by correlating against an independent
+        # reading of the face disagreed with each other (+0.51 and -0.51), the
+        # detector being unreliable on a stylised face behind glasses. The
+        # rendered frames are not ambiguous, so they decide it.
+        # X is negated and Y is simply left alone. Written out rather than
+        # applied as one `*= -1`, because the line this replaces already
+        # negated Y — negating it a second time is the identity, and doing that
+        # by accident left the vertical axis exactly as wrong as it was.
+        norm_all[:, 0] *= -1
 
         idx = list(range(len(frames)))
         print(f'keeping all {len(idx)} frames')
