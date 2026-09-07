@@ -46,12 +46,19 @@ const YAWN = `${import.meta.env.BASE_URL}character/yawn.mp4`
  * and can paint — so every hand-over would have to prove it again, and the
  * proof is a play/pause round trip. Three elements keep one proof each.
  *
- * The order no longer carries any weight, and that is the point of the rewind
- * in `rewindIdle`: every clip now departs from its own opening frame, so every
- * seam of the cycle is one first frame to another and the two possible rounds
- * are the same three seams in the other direction — measured over the head,
- * 6.60, 2.38 and 6.92 of 255 either way. Picking an order used to mean picking
- * which last frames to live with, and the worst of those was 15.26.
+ * The order is chosen for its seams, and a seam here is one clip's LAST frame
+ * against the next one's first — see `commitHandOver` for why the outgoing clip
+ * is not rewound before the dissolve. Measured over the head, on the composited
+ * crops: coffee -> yawn is 2.72 of 255, yawn -> idle 6.74, and idle -> coffee
+ * 12.19.
+ *
+ * That last one is the worst seam on the page and it is the idle's fault rather
+ * than the order's. The idle is the only one of the five clips that does not
+ * come back to the pose it opens on, so whatever follows it is met by a frame
+ * nothing matches; running the cycle the other way only moves which clip has to
+ * catch it. Ending the idle on a better frame was searched for and there is
+ * none — it drifts to 14.0 from its own frame 0 by three seconds and returns
+ * only to 10.73 by the end.
  */
 const LOOP = [IDLE, COFFEE, YAWN]
 
@@ -128,16 +135,17 @@ export function CharacterStage() {
    *
    * One per clip — slot 0 the idle, slot 1 the coffee, slot 2 the yawn — and
    * takes walk round them, so every swap dissolves two shots that already line
-   * up rather than cutting. Each of them departs from its own opening frame
-   * (see rewindIdle), which is what makes the three seams comparable at all:
-   * measured over the head, they are 6.60, 2.38 and 6.92 of 255, against the
-   * 5.91 to 6.66 of the seams that already read as seamless.
+   * up rather than cutting. A dissolve leaves each of them on the frame its
+   * take ended on and rewinds it only once it is covered — see
+   * `commitHandOver`, which is where the loop's jump turned out to live.
    *
    * The set predates the coffee: it was two copies of the idle, dissolving the
-   * idle's own wrap, because that clip does not loop into itself — last frame
-   * 2.10 from first, seventeen normal frame steps, no clean loop point anywhere
-   * in it. Alternating clips retires that problem instead of solving it, since
-   * the idle no longer follows itself.
+   * idle's own wrap, because that clip does not loop into itself. Alternating
+   * clips stopped the idle following itself, but it did not make the idle loop
+   * — it still ends 10.73 of 255 from its own opening frame, measured over the
+   * head, and that is the whole of the idle -> coffee seam. Dissolving the
+   * idle's wrap on a second copy of the element is the one thing that would
+   * retire it properly; nothing about the scheduling can.
    *
    * An <img> of the frame was tried first and measured worse than the problem:
    * painting a LOSSLESS image of a frame instead of the video's own differs by
@@ -208,6 +216,15 @@ export function CharacterStage() {
    */
   const swapTimer = useRef<number | undefined>(undefined)
   const nextSlot = useRef<number | null>(null)
+  /**
+   * The rewind of the clip a dissolve has just left, held until that clip is
+   * covered.
+   *
+   * See `parkClip`. Rewinding it at the moment of the swap put an
+   * instantaneous 8.87-of-255 step across the head on screen at full opacity,
+   * which is what the loop's jump turned out to be.
+   */
+  const rewindTimer = useRef<number | undefined>(undefined)
   /** Holds the replayed wave on its first frame until the idle has dissolved
    *  off it. */
   const waveStartTimer = useRef<number | undefined>(undefined)
@@ -298,56 +315,52 @@ export function CharacterStage() {
   const startIdleRef = useRef<() => void>(() => {})
 
   /**
-   * Put the showing clip back on its opening frame before a dissolve leaves it.
+   * Park a clip: paused, on its opening frame.
    *
-   * Every outgoing dissolve used to depart from wherever the take had ended,
-   * and that is what the small jump was. The head drifts through a take and is
-   * furthest from where the other clips open at the moment the take finishes:
-   * measured on the composited crops, the idle's LAST frame sits 4.87 of 255
-   * from the wave's first and 4.08 from the smile's, while its FIRST frame sits
-   * at 4.00 and 3.19. The seams that read as perfect — the greeting handing
-   * over to the idle, and the smile handing back — are 3.24 and 3.12, so 3.19
-   * is inside that band and 4.87 is plainly outside it.
+   * Two callers, and they want it at very different moments.
    *
-   * The wave and the smile were given this and the loop was not, on a
-   * whole-frame mean that said the loop did not need it: the idle's last frame
-   * to the coffee's first is 3.99, which sits right on the 4.00 the fixed wave
-   * seam measures. That number was measuring the wrong thing. Nearly all of a
-   * frame here is backdrop and jumper, which barely move, so the head — the one
-   * place anybody looks — is averaged away. Measured over the head alone, on
-   * the same crops, the picture inverts:
+   * The wave and the smile want it BEFORE they take over, because the frame
+   * the idle is left on is the frame their dissolve departs from. The head
+   * drifts through a take, so measured over the head on the composited crops,
+   * the idle's last frame sits 12.33 of 255 from the wave's first and 12.28
+   * from the smile's, while its first frame sits at 6.58 and 6.72 — against
+   * 6.28 for the greeting's hand-over to the idle, which is the seam everyone
+   * calls perfect. Departing from frame 0 is what puts those two in that band.
    *
-   *     idle[last]  -> coffee[first]   15.26     the loop hand-over, today
-   *     idle[last]  -> wave[first]     14.92     the seam this rewind was written for
-   *     idle[first] -> coffee[first]    6.60     the loop hand-over, rewound
-   *     idle[first] -> wave[first]      5.91  \
-   *     idle[first] -> smile[first]     6.53   |  the seams that read as fine
-   *     wave[last]  -> idle[first]      6.17   |
-   *     yawn[last]  -> idle[first]      6.66  /
-   *     coffee[last]-> yawn[first]      2.44
+   * They can afford the seek because of what covers it: `data-idle-leaving`
+   * drops the loop's hold, so the layer starts thinning on the same frame it
+   * is seeked, and the wave underneath is already opaque.
    *
-   * So idle -> coffee was carrying the whole of the old wave jump, and a
-   * two-second crossfade does not hide it — it holds the two head positions on
-   * screen together, as a double exposure, for the entire fade.
+   * The loop cannot afford it, and that is what `commitHandOver` explains at
+   * length. Its outgoing layer HOLDS at full opacity for a whole fade, so a
+   * seek there is on screen, unmasked. Recorded off the page, it was a single
+   * 8.87-of-255 step across the head against 0.1-0.7 for every other step of
+   * the same dissolve.
    *
-   * Nothing else was available. Searched frame by frame, no clip has an opening
-   * frame that matches the idle's end better than its own frame 0, and the
-   * idle's own frame 0 is the best of its 141 frames to depart from towards the
-   * coffee. Head size and position agree across all clips to within 1.6% and
-   * the global grade difference is 1.52 at worst, so the departure frame is the
-   * whole of the lever.
+   * The cost of that, and it is a real one: the loop's dissolves now depart
+   * from last frames. idle[last] -> coffee[first] is 12.19 rather than the
+   * 6.71 a rewind would give, though coffee[last] -> yawn[first] is 2.72 and
+   * yawn[last] -> idle[first] 6.74, both unchanged in practice. That 12.19 is
+   * spread across two seconds and measured 2.54 at its worst frame; the 8.87
+   * it replaces happened in one.
    *
-   * The step back to frame 0 is the clip's own wrap: 2.10 for the idle — the
-   * same one the loop already makes at the start of every take — and 0.81 and
-   * 0.83 for the coffee and the yawn, which end where they began.
+   * The root of it is the idle clip itself, and no amount of scheduling fixes
+   * that: it is the only one of the five that does not return to the pose it
+   * opens on. Measured against its own frame 0 it drifts to 14.0 by three
+   * seconds and comes back only to 10.73 by the end, so there is no frame to
+   * end the take on that would make the wrap cheap. The coffee and the yawn
+   * both end where they began, at 0.81 and 0.83.
    */
-  const rewindIdle = useCallback(() => {
-    const node = loopNodes.current[loopSlotRef.current]
+  const parkClip = useCallback((node: HTMLVideoElement | null | undefined) => {
     if (!node) return
     node.pause()
-    idleRunning.current = false
     if (node.currentTime !== 0) node.currentTime = 0
   }, [])
+
+  const rewindIdle = useCallback(() => {
+    idleRunning.current = false
+    parkClip(loopNodes.current[loopSlotRef.current])
+  }, [parkClip])
 
   /**
    * Choose the next clip of the cycle and prove it can paint. No swap.
@@ -421,14 +434,35 @@ export function CharacterStage() {
     nextSlot.current = null
     const node = loopNodes.current[next]
     if (!node) return
-    // The clip leaving departs from its opening frame — see rewindIdle. This
-    // is the seam that was jumping.
-    rewindIdle()
+
+    // The clip being left. It stays on the frame its take ended on for the
+    // whole of the dissolve, and is only rewound afterwards — see below.
+    const leaving = loopNodes.current[loopSlotRef.current]
+    idleRunning.current = false
+    if (leaving) leaving.pause()
+
     node.pause()
     if (node.currentTime !== 0) node.currentTime = 0
     loopSlotRef.current = next
     setLoopSlot(next)
-  }, [rewindIdle])
+
+    // Rewinding the outgoing clip AT the swap is what the jump was.
+    //
+    // The layer being left holds at full opacity for one CLIP_FADE while the
+    // arriving one fades in over it — that hold is what keeps the box covered,
+    // and it also means anything done to the leaving clip in that window is
+    // fully on screen. Recorded off the composited page at 100ms intervals,
+    // the seek back to frame 0 landed as a single 8.87-of-255 step across the
+    // head with the arriving clip still at opacity 0.00, against 0.1-0.7 for
+    // every other step of the same dissolve.
+    //
+    // It cannot simply be dropped: `startIdle` replays the same clip when no
+    // hand-over happened, and a layer at rest is expected to sit on frame 0.
+    // So it is deferred by exactly the hold, by which point the arriving clip
+    // is opaque and the seek is behind it.
+    window.clearTimeout(rewindTimer.current)
+    rewindTimer.current = window.setTimeout(() => parkClip(leaving), CLIP_FADE)
+  }, [parkClip])
 
   const rest = useCallback(() => {
     const min = reduced ? IDLE_REST.reducedMin : IDLE_REST.min
@@ -690,6 +724,7 @@ export function CharacterStage() {
     () => () => {
       window.clearTimeout(restTimer.current)
       window.clearTimeout(swapTimer.current)
+      window.clearTimeout(rewindTimer.current)
       window.clearTimeout(waveStartTimer.current)
       window.clearTimeout(smileStartTimer.current)
       window.clearTimeout(smileWaitTimer.current)
