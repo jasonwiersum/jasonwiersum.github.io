@@ -37,60 +37,94 @@ from PIL import Image
 from scipy import ndimage as ndi
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE = ROOT / 'public' / 'images' / 'final.mp4'
+SOURCE = ROOT / 'public' / 'images' / 'final-chroma.mp4'
 OUT_DIR = ROOT / 'public' / 'character'
 # The manifest is small and the app needs it before the first paint, so it is
 # bundled from src/ rather than fetched at runtime.
 MANIFEST = ROOT / 'src' / 'components' / 'Character' / 'manifest.json'
 
-# --- matte ----------------------------------------------------------------
-BORDER = 26            # frame edge that is certainly backdrop
-BOTTOM_CLEAR = 260     # bottom corners the shoulders never reach
-POLY_DEGREE = 3
-BAND = 3               # half-width of the soft edge, px
-D_SOLID = 26.0         # distance from the backdrop that is certainly subject
-D_WEAK = 11.0          # hysteresis floor; the border residual peaks near 8.5
-D_EDGE = 6.0
+# --- the key ---------------------------------------------------------------
+# The subject is shot against a green screen, and the whole matte is one
+# threshold on how far green runs ahead of the stronger of red and blue.
+#
+# It replaces a polynomial fit of the backdrop plus a hysteresis flood. That
+# machinery existed because the first take was shot against a pale grey the
+# cream jumper came within ~8 levels of, so no threshold could separate them
+# and the edge had to be argued for. It never worked properly: the hair came
+# out as a staircase with a pale collar of backdrop still attached to it.
+#
+# Against green there is nothing to argue about. Measured on this take the two
+# populations sit at about -30 and +144 with the histogram empty between 7 and
+# 121, so a ramp across 20..105 only ever lands on genuinely mixed pixels — the
+# anti-aliased rim the renderer drew, which is exactly what should come out
+# part-transparent. On one frame that is 3.4k soft pixels against 214k solid.
+KEY = (27.0, 191.0, 47.0)   # the screen, measured off the frame corners
+KEY_LO = 20.0               # greenness at or below which a pixel is all subject
+KEY_HI = 105.0              # and at or above which it is all screen
 
 # --- output ---------------------------------------------------------------
-# One CONTIGUOUS stretch of the clip is kept, at full frame rate.
+# EVERY frame of the clip is kept, at full frame rate.
 #
-# Contiguous is the whole point. The cursor picks the frame that looks nearest
-# to it, and two frames that look in similar directions have to be similar
-# pictures or the change between them reads as a cut. Within one unbroken pass
-# of the recording they are: neighbouring cursor positions land on frames a few
-# hundredths of a second apart. Sampled across the whole clip they are not —
-# the same direction recurs several times with the body in a different place,
-# and crossing between those recurrences is what pops.
+# It used to be one contiguous window of 110 of the 240, chosen by how well it
+# answered nine directions. The reasoning was that a window is one unbroken
+# pass of the recording, so any two of its frames are a plausible pair to walk
+# between, whereas the whole clip revisits each direction several times with
+# the body in a different place.
 #
-# The window is chosen below by how well it covers the nine directions, not by
-# hand. SEGMENT is its length in source frames; the search picks where it goes.
+# What that cost is measurable and it is the reason for this change. Against
+# the nine directions, the best 110-window answers looking straight UP at 0.746
+# where the full clip answers it at 0.176, straight down at 0.391 against
+# 0.218, and down-right at 0.521 against 0.344. Half the recording was being
+# thrown away and two of the nine directions went with it.
 #
-# 110 rather than 72. Sweeping the length against the coverage cost, everything
-# up to about 110 buys a real improvement and nothing past it does: cost 1.29 at
-# 72, 0.99 at 110, 0.97 at the full 240, while the amount the chosen frame
-# doubles back as the cursor sweeps keeps climbing, 1.3 -> 1.5 -> 2.5. The two
-# directions that gain are the two that were visibly weak, up-left (0.92 -> 0.65)
-# and down-left (0.29 -> 0.15); at 72 no window can hold them and the horizontal
-# extremes at once, because they are 140 frames apart in the recording.
-SEGMENT = 110
+# The objection to keeping everything was real, though, and it needed answering
+# rather than ignoring: with all 240 frames the same direction recurs, so the
+# nearest-looking frame can be most of the clip away. Simulated against the
+# runtime's own walk, sweeping the cursor down the screen made the aim jump 230
+# frames, which is 3.8s of walking before the head arrives.
+#
+# GAZE_NEARNESS is the answer, and it lives in the manifest because the runtime
+# is what applies it — see the render loop in CharacterStage.
 SPRITE_WIDTH = 400     # px per frame in the sheet
 QUALITY = 72
 GUTTER = 8
 PAD = 16               # source rows replicated below the crop, so the resize
                        # samples the bust instead of the empty gutter
-BOTTOM_PAD = 12        # rows added under the frame while matting, so the
-                       # morphology never mistakes the cut for background             # transparent margin around every pose in the sheet.
-                       # Without it, lossy compression and sub-pixel sampling
-                       # drag a sliver of the neighbouring pose into the window,
-                       # which reads as a lit rectangle around the character on
-                       # a dark page.
+#
+# GUTTER is a transparent margin around every pose in the sheet. Without it,
+# lossy compression and sub-pixel sampling drag a sliver of the neighbouring
+# pose into the window, which reads as a lit rectangle around the character on
+# a dark page.
 # The gaze cloud is L-shaped: the subject never looks up-and-right, so that
 # corner of the cursor plane has to be approximated. Weighing both axes equally
 # lands on an up-LEFT frame there, which reads as looking the wrong way.
 # Horizontal gaze is much more legible than vertical, so the runtime weights x
 # harder and lets the vertical give. Shipped in the manifest, applied there.
 GAZE_WEIGHT_X = 2.5
+
+# How much the runtime prefers a frame it can reach soon over one that looks
+# very slightly more like where the cursor is, as a cost on the distance
+# through the clip, normalised by the clip's length.
+#
+# Needed only because every frame is kept — see the note above. The recording
+# passes each direction several times, so there is almost always a frame that
+# both looks right AND is close by; this is what makes the runtime take it.
+#
+# 4 was chosen by simulating the runtime's actual loop against nine cursor
+# targets from four starting positions. Time for the head to arrive, and how
+# far it lands from the direction asked for:
+#
+#                         arrives (avg)   arrives (worst)   gaze error
+#   110-frame window            1.11s            2.13s          0.356
+#   all 240, no nearness        1.70s            2.98s          0.332
+#   all 240, nearness 2         1.06s            2.98s          0.305
+#   all 240, nearness 4         0.92s            2.05s          0.332
+#   all 240, nearness 16        0.74s            1.82s          0.424
+#
+# 4 is the last value that is better than the shipping window on every column
+# at once. Past it the head arrives sooner by settling for a frame that is
+# visibly looking somewhere else.
+GAZE_NEARNESS = 4.0
 
 # --- gaze tracking --------------------------------------------------------
 # Measured out from the EYEBROWS, not at fixed pixel coordinates.
@@ -138,94 +172,36 @@ def run_ffmpeg(dst: Path) -> None:
     )
 
 
-def background_plate(im):
-    """The backdrop is a smooth gradient; fit it from the edges so it can be
-    extrapolated behind the subject."""
-    h, w, _ = im.shape
-    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
-    xn, yn = xx / w, yy / h
-    sel = np.zeros((h, w), bool)
-    sel[:BORDER] = True
-    sel[:, :BORDER] = True
-    sel[:, -BORDER:] = True
-    # The shoulders leave frame between roughly x=320 and x=960, so the bottom
-    # corners are backdrop too. Fitted without them the model extrapolates the
-    # lower half badly and the matte floods the whole bottom of the picture.
-    sel[-BORDER * 3:, :BOTTOM_CLEAR] = True
-    sel[-BORDER * 3:, -BOTTOM_CLEAR:] = True
-    terms = [xn ** i * yn ** j
-             for i in range(POLY_DEGREE + 1)
-             for j in range(POLY_DEGREE + 1 - i)]
-    A = np.stack([t[sel] for t in terms], 1)
-    full = np.stack([t.ravel() for t in terms], 1)
-    out = np.empty_like(im)
-    for c in range(3):
-        coef, *_ = np.linalg.lstsq(A, im[..., c][sel], rcond=None)
-        out[..., c] = (full @ coef).reshape(h, w)
-    return out
+def key_matte(path):
+    """RGB with the screen unmixed out, plus alpha.
 
+    Three steps, and the order matters.
 
-def _leaked(mask):
-    """The subject reaches the bottom edge and no other; anything else means the
-    silhouette has escaped into the backdrop."""
-    return mask[0].any() or mask[:, 0].any() or mask[:, -1].any()
+    Alpha first, from greenness — see KEY_LO/KEY_HI. Then spill: the screen
+    throws green light onto the subject, so green is pulled back to whatever
+    red or blue can justify wherever it runs ahead of both. Then the rim is
+    un-mixed: a part-covered pixel is subject*a + screen*(1-a), and solving for
+    the subject is what stops the edge carrying a green fringe onto the page.
 
-
-def silhouette(d, noise):
-    """One filled region for the subject.
-
-    Hysteresis rather than a single cut: the cream sweater comes within ~8 of
-    the backdrop along one shoulder, which a single threshold chews into a
-    staircase. Seeding on the confident interior and growing through a weak
-    threshold recovers that edge. The weak level rides on the frame's own noise
-    floor because the opening frames fade in and fit several units worse.
+    The un-mix uses the screen with its own green already suppressed. Using the
+    raw screen colour there subtracts a green that the spill pass has just
+    removed, which drives the rim magenta.
     """
-    strong = d > D_SOLID
-    weak_level = max(D_WEAK, noise + 2.5)
-    while True:
-        core = ndi.binary_propagation(strong, mask=d > weak_level)
-        if not _leaked(core) or weak_level > D_SOLID:
-            break
-        weak_level += 2.0
-    core = ndi.binary_closing(core, np.ones((9, 9)))
-    lab, n = ndi.label(core)
-    if n:
-        sizes = ndi.sum(core, lab, range(1, n + 1))
-        core = lab == (np.argmax(sizes) + 1)
-    core = ndi.binary_fill_holes(core)
-    core[-1] = ndi.binary_closing(core[-1], np.ones(25))
-    core = ndi.binary_fill_holes(core)
-    return ndi.binary_closing(core, np.ones((5, 5)))
-
-
-def matte(path):
-    """RGB with the backdrop unmixed out, plus alpha."""
     im = np.asarray(Image.open(path).convert('RGB')).astype(np.float32)
-    bg = background_plate(im)
-    d = np.linalg.norm(im - bg, axis=2)
-    ring = np.concatenate([d[:60].ravel(), d[:, :110].ravel(), d[:, -110:].ravel()])
+    r, g, b = im[..., 0], im[..., 1], im[..., 2]
+    cap = np.maximum(r, b)
+    alpha = np.clip((KEY_HI - (g - cap)) / (KEY_HI - KEY_LO), 0.0, 1.0)
 
-    # The bust runs off the bottom of frame, but every morphology step below
-    # treats outside-the-array as background and would erode it away there,
-    # leaving a soft line across the cut. Extend downward first, trim after.
-    im, bg, d = (np.vstack([a, np.repeat(a[-1:], BOTTOM_PAD, axis=0)]) for a in (im, bg, d))
-    sil = silhouette(d, float(np.percentile(ring, 99.9)))
+    fg = im.copy()
+    fg[..., 1] = np.minimum(g, cap)
 
-    inner = ndi.binary_erosion(sil, np.ones((3, 3)), iterations=BAND)
-    outer = ndi.binary_dilation(sil, np.ones((3, 3)), iterations=1)
-    alpha = np.zeros(d.shape, np.float32)
-    alpha[inner] = 1.0
-    band = outer & ~inner
-    alpha[band] = np.clip((d[band] - D_EDGE) / (D_SOLID - D_EDGE), 0, 1)
-    alpha = ndi.gaussian_filter(alpha, 0.7)
-    alpha[inner] = 1.0
-    alpha[~outer] = 0.0
+    screen = np.array(KEY, np.float32)
+    screen[1] = max(KEY[0], KEY[2])
+    mixed = (alpha > 0.02) & (alpha < 0.98)
+    a = alpha[mixed][:, None]
+    fg[mixed] = np.clip((fg[mixed] - screen * (1 - a)) / a, 0, 255)
 
-    # Unmix: pull the pale backdrop out of the soft edge so it cannot survive as
-    # a light fringe once the character sits on a dark page.
-    a = np.clip(alpha, 1e-3, 1)[..., None]
-    fg = np.clip((im - (1 - a) * bg) / a, 0, 255)
-    return fg[:-BOTTOM_PAD].astype(np.uint8), (alpha[:-BOTTOM_PAD] * 255).astype(np.uint8)
+    return fg.astype(np.uint8), (alpha * 255).astype(np.uint8)
 
 
 def _blobs(lum):
@@ -351,38 +327,8 @@ def read_gaze(paths):
 DIRECTIONS = [(-1, 1), (0, 1), (1, 1), (-1, 0), (0, 0), (1, 0), (-1, -1), (0, -1), (1, -1)]
 
 
-def pick_frames(norm, length):
-    """The contiguous run of `length` frames that answers the nine directions
-    best, as a list of source frame indices.
-
-    Contiguous, so every frame in it belongs to one unbroken pass of the
-    recording and any two are a plausible pair to cut between. Chosen by
-    coverage rather than by hand, so re-running this on a different take still
-    picks a sensible window.
-
-    The clip revisits every direction several times, so a window this short
-    loses almost nothing: the corner the subject never looks at is missing from
-    the whole recording, not from the window."""
-    total = len(norm)
-    length = min(length, total)
-    best, where = None, 0
-    for start in range(total - length + 1):
-        win = norm[start:start + length]
-        errs = [
-            np.sqrt(np.min(GAZE_WEIGHT_X * (win[:, 0] - dx) ** 2 + (win[:, 1] - dy) ** 2))
-            for dx, dy in DIRECTIONS
-        ]
-        # Mean keeps the window broadly useful, max stops it abandoning one
-        # direction entirely to be slightly better at the rest.
-        cost = float(np.mean(errs)) + float(np.max(errs))
-        if best is None or cost < best:
-            best, where = cost, start
-    return list(range(where, where + length))
-
-
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--segment', type=int, default=SEGMENT)
     ap.add_argument('--width', type=int, default=SPRITE_WIDTH)
     ap.add_argument('--quality', type=int, default=QUALITY)
     args = ap.parse_args()
@@ -406,17 +352,19 @@ def main():
         norm_all = (g - mid) / half
         norm_all[:, 1] *= -1      # image y grows downward; up should be +1
 
-        idx = pick_frames(norm_all, args.segment)
-        print(f'window: source frames {idx[0]}..{idx[-1]} of {len(frames)}')
+        idx = list(range(len(frames)))
+        print(f'keeping all {len(idx)} frames')
         for (dx, dy), name in zip(DIRECTIONS, (
                 'TOP-LEFT', 'TOP-CENTER', 'TOP-RIGHT', 'CENTER-LEFT', 'CENTER',
                 'CENTER-RIGHT', 'BOTTOM-LEFT', 'BOTTOM-CENTER', 'BOTTOM-RIGHT')):
-            win = norm_all[idx]
-            k = int(np.argmin(GAZE_WEIGHT_X * (win[:, 0] - dx) ** 2 + (win[:, 1] - dy) ** 2))
-            print(f'  {name:<14} {win[k][0]:+.2f} {win[k][1]:+.2f}')
+            k = int(np.argmin(GAZE_WEIGHT_X * (norm_all[:, 0] - dx) ** 2
+                              + (norm_all[:, 1] - dy) ** 2))
+            miss = np.hypot((norm_all[k][0] - dx) * GAZE_WEIGHT_X ** 0.5,
+                            norm_all[k][1] - dy)
+            print(f'  {name:<14} {norm_all[k][0]:+.2f} {norm_all[k][1]:+.2f}   off by {miss:.3f}')
 
-        print('matting…')
-        mattes = {i: matte(frames[i]) for i in sorted(set(idx))}
+        print('keying…')
+        mattes = {i: key_matte(frames[i]) for i in idx}
 
         # One crop for every frame, so nothing shifts between them.
         x0 = y0 = 10 ** 9
@@ -491,8 +439,9 @@ def main():
             'count': len(idx),
             'neutral': neutral,
             'gazeWeightX': GAZE_WEIGHT_X,
+            'gazeNearness': GAZE_NEARNESS,
             'gaze': [[round(float(a), 4), round(float(b), 4)] for a, b in norm],
-            'source': 'images/final.mp4',
+            'source': 'images/final-chroma.mp4',
         }
         MANIFEST.parent.mkdir(parents=True, exist_ok=True)
         MANIFEST.write_text(json.dumps(manifest))

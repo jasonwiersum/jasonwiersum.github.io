@@ -67,6 +67,10 @@ const LOOP = [IDLE, COFFEE, YAWN]
 const GAZE = Float32Array.from(manifest.gaze.flat())
 const COUNT = manifest.count
 const WEIGHT_X = manifest.gazeWeightX
+/** How much the aim prefers a frame it can reach soon over one that looks a
+ *  shade more like where the cursor is. See the render loop, and the note in
+ *  build-character.py that measured it. */
+const NEARNESS = manifest.gazeNearness
 
 /** Whether this device has a pointer that can be followed at all. Read once:
  *  a machine does not grow a mouse mid-session, and if one is plugged in the
@@ -787,16 +791,33 @@ export function CharacterStage() {
       const img = sheet.current
       if (!img) return
 
-      // Aim: the frame that looks closest to where the cursor is. No tie-break
-      // for nearness is needed — every frame here belongs to one pass of the
-      // recording, so the nearest match is never on the far side of the clip.
+      // Aim: the frame that best answers where the cursor is, counting BOTH how
+      // closely it looks there and how far the walk to it would be.
+      //
+      // The sheet is the whole recording now rather than one 110-frame pass of
+      // it, which is what lets the character look straight up and straight down
+      // at all — those two directions only exist outside the window that used
+      // to be kept. The cost of keeping everything is that the clip passes each
+      // direction several times, so the best-looking frame can be most of the
+      // clip away: simulated against this very loop, sweeping the cursor down
+      // the screen made the aim jump 230 frames, and at MAX_TRAVEL that is 3.8
+      // seconds of walking before the head arrives.
+      //
+      // The second term is what retires that. Because the recording revisits
+      // each direction, there is nearly always a frame that both looks right
+      // and is close by, and this is what makes the loop take it. Measured, it
+      // is not a trade of accuracy for speed: against the window that used to
+      // ship, the head now arrives in 0.92s rather than 1.11s on average and
+      // 2.05s rather than 2.13s at worst, AND lands closer to the direction
+      // asked for (0.332 against 0.356). The weight is in the manifest.
       const here = position.current
       let aim = 0
       let bestCost = Infinity
       for (let i = 0; i < COUNT; i += 1) {
         const dx = GAZE[i * 2] - gaze.x
         const dy = GAZE[i * 2 + 1] - gaze.y
-        const cost = WEIGHT_X * dx * dx + dy * dy
+        const far = (i - here) / COUNT
+        const cost = WEIGHT_X * dx * dx + dy * dy + NEARNESS * far * far
         if (cost < bestCost) {
           bestCost = cost
           aim = i
