@@ -3,16 +3,19 @@
  * Character tuning — everything adjustable lives here
  * ===========================================================================
  *
- * The character is one unbroken stretch of `public/images/final.mp4`, kept as a
+ * The character is the whole of `public/images/final-chroma.mp4`, kept as a
  * sheet of frames in filming order (`scripts/build-character.py`). The cursor
- * does not pick a picture: it picks a position in that stretch, and the runtime
- * walks there one frame at a time, so what plays is recorded movement.
+ * does not pick a picture: it picks a position in that recording, and the
+ * runtime walks there one frame at a time, so what plays is recorded movement.
  *
- * The stretch being unbroken is what keeps the character pointing where the
- * cursor is. Sampled across the whole clip, the same direction recurs several
- * times and the aim jumps between those recurrences, so the head sets off the
- * wrong way and comes back — it looked like it was ignoring you. Within one
- * pass there is nowhere else to go.
+ * Every frame is kept. It used to be one unbroken 110-frame window of the 240,
+ * because sampling the whole clip means the same direction recurs and the aim
+ * can jump between those recurrences — the head sets off the wrong way and
+ * comes back. What that window cost was two of the nine directions: straight up
+ * and straight down only exist outside it. Keeping everything and adding a
+ * nearness term to the aim (GAZE_NEARNESS, in the manifest) answers the
+ * recurrence problem instead of avoiding it, and measured, it tracks both
+ * faster and closer than the window did.
  */
 
 /** How far the pointer has to travel for the gaze to reach its extreme, as a
