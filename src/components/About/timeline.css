@@ -468,13 +468,11 @@
     transition: opacity 520ms var(--ease-out);
   }
 
-  .timeline__item::after {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 0;
-    transition: opacity 420ms var(--ease-out);
-  }
-
-  .timeline__item[data-shown]::after {
-    opacity: 1;
-  }
+  /* The dot is NOT overridden here any more. It used to be pinned at scale(1)
+     and cross-faded instead, which meant that with the preference set the dots
+     appeared at full size rather than arriving — measured, `--dot-scale` never
+     left its final value while the pseudo-element ran 0.75, 0.92, 0.98 of
+     opacity. Growing a 12px dot out of its own centre is not the distance the
+     preference guards against; Timeline.tsx shortens the tween and drops its
+     overshoot instead, which is what `motionBudget` asks for. */
 }

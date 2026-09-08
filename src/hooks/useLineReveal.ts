@@ -64,6 +64,23 @@ const LEAD = 2
  */
 const RATE = 9
 
+/**
+ * The same, for a reader who has asked for less motion.
+ *
+ * The reveal is NOT switched off there, and the earlier decision to switch it
+ * off was a mistake with a bad reason attached: I wrote that a line-by-line
+ * reveal is motion and has no gentler version. It moves nothing. A mask only
+ * decides which parts of a static column are painted, so what this actually is
+ * is a cross-fade spread down a paragraph — the exact thing `motionBudget`
+ * says survives the preference, because distance and duration are what provoke
+ * vestibular discomfort and a fade is neither.
+ *
+ * What the preference does get is the shorter duration that budget already
+ * applies everywhere else: at 24 lines a second the whole block cross-fades in
+ * about 0.7s rather than 1.8, and nothing travels in either case.
+ */
+const RATE_REDUCED = 24
+
 /** The soft edge under the drawn line, in line heights. About one, so exactly
  *  one line is mid-fade at any moment and it fades over its own height rather
  *  than being switched on. */
@@ -98,9 +115,9 @@ const FEATHER = 1.1
  * justified and hyphenated as written, and all that moves is where it is
  * painted from.
  *
- * Under `prefers-reduced-motion` the mask is removed entirely rather than
- * softened. A line-by-line reveal is motion tied to scrolling and there is no
- * gentler version of it that is still the same idea; the prose is simply there.
+ * Under `prefers-reduced-motion` it still runs, only quicker — see
+ * RATE_REDUCED. Nothing here travels, so there is nothing for the preference
+ * to take away except time.
  */
 export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: unknown) {
   useEffect(() => {
@@ -117,10 +134,7 @@ export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: u
       delete root.dataset.lineReveal
     }
 
-    if (motionBudget().reduced) {
-      clear()
-      return
-    }
+    const rate = motionBudget().reduced ? RATE_REDUCED : RATE
     root.dataset.lineReveal = 'on'
 
     /** The resolved line box of an element, in px. `line-height: normal`
@@ -178,7 +192,7 @@ export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: u
       // single frame.
       const elapsed = Math.min(now - clock, 64) / 1000
       clock = now
-      const limit = RATE * elapsed
+      const limit = rate * elapsed
       const gap = want - drawn
       drawn += Math.abs(gap) <= limit ? gap : Math.sign(gap) * limit
       paint(line, counts)
