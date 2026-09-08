@@ -1,6 +1,7 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 
 /**
  * `base` is resolved at build time from the BASE_PATH environment variable so that
@@ -47,6 +48,29 @@ const siteUrl = (process.env.SITE_URL || `http://localhost:4173${base}`).replace
  */
 const PAGES = ['']
 
+/**
+ * The images that belong to the page, for the image sitemap.
+ *
+ * Only two are worth declaring. The still is the first image on the page under
+ * the mobile-first crawl — the one that becomes the thumbnail beside a search
+ * result — and its filename carries a content hash, so it has to be read from
+ * the manifest rather than written down here. The og-image is what a link
+ * unfurls to. The sprite sheet is deliberately absent: it is a 15x16 grid of
+ * every frame of a clip, which is a mechanism and not a picture, and offering
+ * it to an image crawler would be offering nonsense.
+ *
+ * `image:loc` and nothing else. Google stopped reading `image:caption`,
+ * `image:title`, `image:license` and `image:geo_location` in 2022; the tags are
+ * still valid in the schema and are still ignored, so emitting them would be
+ * decoration.
+ */
+function pageImages(): string[] {
+  const manifest = JSON.parse(
+    readFileSync(new URL('./src/components/Character/manifest.json', import.meta.url), 'utf8'),
+  ) as { still: string }
+  return [`character/${manifest.still}`, 'og-image.png']
+}
+
 /** The commit's date, so `lastmod` moves when the content does.
  *
  *  Not the build's: the workflow rebuilds nightly to keep the CV's date
@@ -80,9 +104,15 @@ function siteMetadata(): Plugin {
     },
     generateBundle() {
       const lastmod = lastModified()
+      const images = pageImages()
+        .map((file) => `    <image:image>\n      <image:loc>${siteUrl}${file}</image:loc>\n    </image:image>`)
+        .join('\n')
       const urls = PAGES.map((page) => {
         const loc = `${siteUrl}${page}`
-        return `  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n  </url>`
+        return (
+          `  <url>\n    <loc>${loc}</loc>\n    <lastmod>${lastmod}</lastmod>\n` +
+          `${images}\n  </url>`
+        )
       }).join('\n')
 
       this.emitFile({
@@ -90,7 +120,8 @@ function siteMetadata(): Plugin {
         fileName: 'sitemap.xml',
         source:
           '<?xml version="1.0" encoding="UTF-8"?>\n' +
-          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+          '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"\n' +
+          '        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n' +
           `${urls}\n` +
           '</urlset>\n',
       })
