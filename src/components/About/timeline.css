@@ -163,11 +163,23 @@
   top: var(--dot-y);
   width: var(--dot);
   height: var(--dot);
-  transform: translate(-50%, -50%) scale(0);
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 0 5px var(--accent-soft);
-  transition: transform 560ms var(--ease-spring);
+  /* Scale comes from GSAP, which writes `--dot-scale` every frame — see
+     Timeline.tsx. No transition: a tween already describes the whole curve, and
+     a transition chasing it would run that curve through a second one, which
+     reads as lag. */
+  transform: translate(-50%, -50%) scale(var(--dot-scale, 0));
+  transition: none;
+}
+
+/* The middle points wear a lighter halo than the two ends: 3.75px against the
+   5px above, a quarter less. The first point and the last are the ones worth
+   weighting — where the path starts and where it is now — and the eight between
+   them were competing with that. */
+.timeline__item:not([data-emphasis])::after {
+  box-shadow: 0 0 0 3.75px var(--accent-soft);
 }
 
 /* The two ends of the line are drawn heavier — the point you start from and
@@ -301,23 +313,33 @@
   transform: translate3d(0, 0, 0);
 }
 
-.timeline__item[data-shown]::after {
-  transform: translate(-50%, -50%) scale(1);
+/* The card's own lines, one gate each — `data-in` comes from Timeline.tsx as
+   the line draws past the point. The card itself still slides in with the dot;
+   what arrives piece by piece is what is written on it. */
+.timeline__period,
+.timeline__label,
+.timeline__place,
+.timeline__detail {
+  opacity: 0;
+  transform: translate3d(0, 0.4rem, 0);
+  transition:
+    opacity 620ms var(--ease-out),
+    transform 620ms var(--ease-out);
 }
 
-/* The first point is driven by GSAP instead of by the transition above — see
-   Timeline.tsx. It is the only one with nothing before it, so it grows into
-   place rather than appearing at full size.
-
-   The transition has to go with it, or the two would fight over the same
-   transform: the tween writes a new scale every frame and a transition would
-   then chase each of those, which is a smooth curve run through a second smooth
-   curve and reads as lag. Placed after the `[data-shown]` rule so it wins on
-   order, both selectors being the same weight. */
-.timeline__item:first-child::after {
-  transform: translate(-50%, -50%) scale(var(--dot-scale, 0));
-  transition: none;
+.timeline__period[data-in],
+.timeline__label[data-in],
+.timeline__place[data-in],
+.timeline__detail[data-in] {
+  opacity: 1;
+  transform: none;
+  /* The same delay on all four, so it can never reorder them — it only holds
+     the whole card a beat behind the dot that carries it. On the `[data-in]`
+     rule and not the base one, so it applies coming in and not going out: a
+     point scrolled back past clears at once. */
+  transition-delay: 300ms;
 }
+
 
 .timeline__period {
   font-family: var(--font-mono);

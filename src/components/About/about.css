@@ -544,3 +544,29 @@
 [data-theme='dark'] .about__tagline {
   color: var(--foreground);
 }
+
+/* --- Prose arriving a line at a time ------------------------------------- */
+
+/* The mask `useLineReveal` drives. `--seen` is how far down the paragraph the
+   reader has earned, in whole line boxes, and `--feather` is the soft edge
+   under it — so the next line is visibly on its way rather than switched on.
+
+   Gated on `[data-line-reveal='on']`, which the hook puts on the section only
+   once it has decided to run. Without that gate a paragraph would sit fully
+   masked — `--seen` unset, so 0px — for anyone whose browser never reaches the
+   hook, and the text would simply be missing. Absent the attribute there is no
+   mask at all, which is the correct fallback. */
+[data-line-reveal='on'] [data-lines] {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 var(--seen, 0px),
+    transparent calc(var(--seen, 0px) + var(--feather, 1.6em))
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 var(--seen, 0px),
+    transparent calc(var(--seen, 0px) + var(--feather, 1.6em))
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}

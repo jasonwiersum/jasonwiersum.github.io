@@ -2,6 +2,7 @@ import { Download, Eye } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { SITE } from '../../config/site'
 import { useLanguage } from '../../hooks/useLanguage'
+import { useLineReveal } from '../../hooks/useLineReveal'
 import { useReveal } from '../../hooks/useReveal'
 import { useRevealed } from '../../hooks/useRevealed'
 import { CvDialog } from './CvDialog'
@@ -110,9 +111,13 @@ function Portrait({ alt }: { alt: string }) {
 }
 
 export function About() {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const root = useRef<HTMLDivElement>(null)
   useReveal(root)
+  /** The prose is the one thing in the section that does not arrive in blocks.
+   *  Keyed on the language: different sentences wrap differently, so the
+   *  paragraphs are different heights and hold a different number of lines. */
+  useLineReveal(root, language)
   /** Whether the line has reached the point it ends on. Everything below the
    *  line waits for it, so neither "read the whole history" nor the figures
    *  summing it up can arrive before the history has finished drawing.
@@ -134,9 +139,15 @@ export function About() {
               {t.about.title}
             </h2>
 
+            {/* `data-lines` rather than `data-reveal`: these arrive a line at
+                a time as the page scrolls, not a paragraph at a time. The mask
+                that does it is in about.css and the arithmetic is in
+                `useLineReveal` — which is a mask and not a span per line
+                because this column is justified and hyphenated, and neither
+                survives being cut into one block per line. */}
             <div className="about__prose">
               {t.about.paragraphs.map((paragraph, index) => (
-                <p key={index} data-reveal>
+                <p key={index} data-lines>
                   {paragraph}
                 </p>
               ))}
