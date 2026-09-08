@@ -36,11 +36,13 @@ const END = 0.1
 /**
  * Lines already there when the block starts arriving.
  *
- * Zero would begin every read from a blank column, which looks like a failure
- * to load rather than an effect. Two lines in means the paragraph is legibly a
- * paragraph from the first frame and what follows is it filling in.
+ * None. This was two, on the reasoning that a blank column looks like a failure
+ * to load — but the gate below means the column is only ever blank once the
+ * heading and the portrait are already in place, so there is nothing to
+ * mistake it for. Two free lines put text on screen before the reveal had
+ * started, which is the thing being fixed.
  */
-const LEAD = 2
+const LEAD = 0
 
 /**
  * The fastest the reveal is allowed to run, in lines per second.
@@ -81,10 +83,16 @@ const RATE = 9
  */
 const RATE_REDUCED = 24
 
-/** The soft edge under the drawn line, in line heights. About one, so exactly
- *  one line is mid-fade at any moment and it fades over its own height rather
- *  than being switched on. */
-const FEATHER = 1.1
+/**
+ * The soft edge on the drawn mark, in line heights.
+ *
+ * 0.4, down from 1.1. At a whole line box the fade was always straddling an
+ * entire line, so a line that had arrived still had most of its height part
+ * painted — it read as grey rather than as text. At 0.4 the edge is still soft,
+ * but a line goes solid within about 40ms of being counted at the shipping
+ * rate, so what a reader sees is a line arriving and then being there.
+ */
+const FEATHER = 0.4
 
 /**
  * Prose that fills in line by line as the page scrolls.
@@ -155,6 +163,28 @@ export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: u
     let clock = 0
     let primed = false
 
+    /**
+     * Whether the section has finished arriving.
+     *
+     * The prose waits for its own heading and the portrait beside it. Both are
+     * ordinary `useReveal` targets, so asking what their opacity is now is the
+     * same question as "have they arrived", and it needs no second copy of that
+     * hook's timing to answer.
+     *
+     * A fraction of the viewport cannot express this. The heading sits about
+     * 100px above the prose, so any fixed line the prose waits for is crossed
+     * roughly 100px of scroll after the heading crosses its own — a tenth of a
+     * second at reading speed, against the 900ms the heading takes to fade in.
+     * The prose was starting while the heading was barely visible.
+     *
+     * A portrait that failed to load removes itself, so only the gates that
+     * exist are asked.
+     */
+    const arrived = () =>
+      ['.section__title', '.about__portrait']
+        .map((selector) => root.querySelector<HTMLElement>(selector))
+        .every((el) => !el || Number.parseFloat(getComputedStyle(el).opacity) > 0.98)
+
     /** How many lines the scroll position asks for, and how they divide up. */
     const measure = () => {
       const height = window.innerHeight
@@ -169,8 +199,10 @@ export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: u
       const progress = (height * START - top) / (height * (START - END))
       // Where the page has run out there is no scroll left to earn the rest
       // with — the same floor `useReveal` puts under its own entrance line.
-      const want = atDocumentEnd() ? total : progress * total + LEAD
-      return { line, counts, total, want: Math.min(Math.max(want, 0), total) }
+      const want = !arrived() ? 0 : atDocumentEnd() ? total : progress * total + LEAD
+      const rect = targets[0].getBoundingClientRect()
+      const onScreen = rect.bottom > 0 && rect.top < height
+      return { line, counts, total, onScreen, want: Math.min(Math.max(want, 0), total) }
     }
 
     const paint = (line: number, counts: number[]) => {
@@ -186,7 +218,7 @@ export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: u
     // One frame of the chase: close the distance at RATE lines a second, so the
     // reveal takes the same time however violently the page was scrolled.
     const step = (now: number) => {
-      const { line, counts, want } = measure()
+      const { line, counts, total, onScreen, want } = measure()
       // A backgrounded tab hands back one enormous delta on return; capping it
       // means the reveal resumes from where it was rather than completing in a
       // single frame.
@@ -196,9 +228,15 @@ export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: u
       const gap = want - drawn
       drawn += Math.abs(gap) <= limit ? gap : Math.sign(gap) * limit
       paint(line, counts)
-      // Half a line is not a thing anyone can see, and an exponential never
-      // arrives — without this the loop would run on an ever-halving remainder.
-      frame = Math.abs(want - drawn) < 0.01 ? 0 : requestAnimationFrame(step)
+      // Settled is not the only reason to keep ticking. The gate above opens on
+      // the heading finishing its fade, which is a clock the reader does not
+      // touch — stop on `want === drawn` alone and a reader who stops scrolling
+      // exactly as the heading lands leaves the prose hidden until they move
+      // again, because no frame ever comes to notice. So the loop also runs
+      // while the block is on screen with lines still owed.
+      const settled = Math.abs(want - drawn) < 0.01
+      const owed = drawn < total - 0.01
+      frame = settled && !(onScreen && owed) ? 0 : requestAnimationFrame(step)
     }
 
     const onScroll = () => {

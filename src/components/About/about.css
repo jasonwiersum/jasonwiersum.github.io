@@ -547,25 +547,35 @@
 
 /* --- Prose arriving a line at a time ------------------------------------- */
 
-/* The mask `useLineReveal` drives. `--seen` is how far down the paragraph the
-   reader has earned, in whole line boxes, and `--feather` is the soft edge
-   under it — so the next line is visibly on its way rather than switched on.
+/* The mask `useLineReveal` drives.
+
+   `--seen` is how far down the paragraph the reader has earned, and `--feather`
+   is the soft edge — which sits ABOVE that mark and ENDS on it, not below it.
+   The direction is the whole of this rule and it was wrong.
+
+   Written the other way — `#000 var(--seen), transparent calc(var(--seen) +
+   feather)` — the first stop is opaque AT var(--seen), so with `--seen` at 0
+   the gradient is `#000 0px, transparent 32px`: the very top of the element is
+   fully painted and fades away over the next 32px. Every paragraph therefore
+   showed its own first line, half grey, before the section had arrived at all.
+   Ending the fade on the mark instead means `--seen: 0` paints nothing, which
+   is what nothing revealed should look like.
 
    Gated on `[data-line-reveal='on']`, which the hook puts on the section only
    once it has decided to run. Without that gate a paragraph would sit fully
-   masked — `--seen` unset, so 0px — for anyone whose browser never reaches the
-   hook, and the text would simply be missing. Absent the attribute there is no
-   mask at all, which is the correct fallback. */
+   masked for anyone whose browser never reaches the hook, and the text would
+   simply be missing. Absent the attribute there is no mask at all, which is the
+   correct fallback. */
 [data-line-reveal='on'] [data-lines] {
   -webkit-mask-image: linear-gradient(
     to bottom,
-    #000 var(--seen, 0px),
-    transparent calc(var(--seen, 0px) + var(--feather, 1.6em))
+    #000 calc(var(--seen, 0px) - var(--feather, 1em)),
+    transparent var(--seen, 0px)
   );
   mask-image: linear-gradient(
     to bottom,
-    #000 var(--seen, 0px),
-    transparent calc(var(--seen, 0px) + var(--feather, 1.6em))
+    #000 calc(var(--seen, 0px) - var(--feather, 1em)),
+    transparent var(--seen, 0px)
   );
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
