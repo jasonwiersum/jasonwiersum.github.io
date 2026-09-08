@@ -4,7 +4,7 @@
 Run this only to regenerate the assets; the output is committed, so a normal
 checkout needs none of these tools.
 
-    pip install pillow numpy scipy
+    pip install pillow numpy
     python3 scripts/build-character.py            # needs ffmpeg on PATH
 
 Output:
@@ -34,7 +34,6 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image
-from scipy import ndimage as ndi
 
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / 'public' / 'images' / 'final-chroma.mp4'
@@ -95,71 +94,126 @@ PAD = 16               # source rows replicated below the crop, so the resize
 # lossy compression and sub-pixel sampling drag a sliver of the neighbouring
 # pose into the window, which reads as a lit rectangle around the character on
 # a dark page.
-# The gaze cloud is L-shaped: the subject never looks up-and-right, so that
-# corner of the cursor plane has to be approximated. Weighing both axes equally
-# lands on an up-LEFT frame there, which reads as looking the wrong way.
-# Horizontal gaze is much more legible than vertical, so the runtime weights x
-# harder and lets the vertical give. Shipped in the manifest, applied there.
-GAZE_WEIGHT_X = 2.5
+# How much harder the horizontal axis is weighed than the vertical when
+# choosing a frame.
+#
+# 1.0 — they are weighed the same. This was 2.5, to cope with a gaze cloud that
+# was L-shaped: the measurement in use then never placed a frame up-and-right,
+# so that corner of the cursor plane had to be approximated and leaning on the
+# more legible axis was the least bad way to do it. The cloud now covers the
+# whole square by construction, every corner has a frame of its own, and there
+# is nothing left for the thumb on the scale to buy. Verified either way: at
+# 1.0 and at 2.5 the nine directions choose the same nine frames.
+GAZE_WEIGHT_X = 1.0
 
 # How much the runtime prefers a frame it can reach soon over one that looks
-# very slightly more like where the cursor is, as a cost on the distance
-# through the clip, normalised by the clip's length.
+# more like where the cursor is, as a cost on the distance through the clip.
 #
-# Needed only because every frame is kept — see the note above. The recording
-# passes each direction several times, so there is almost always a frame that
-# both looks right AND is close by; this is what makes the runtime take it.
+# 0.25, down from 4. The old value existed because the old measurement had the
+# clip passing each direction several times, so there was nearly always a frame
+# that both looked right AND was close by, and this made the loop take it.
 #
-# 4 was chosen by simulating the runtime's actual loop against nine cursor
-# targets from four starting positions. Time for the head to arrive, and how
-# far it lands from the direction asked for:
+# The clip does not do that. It is one pass around the perimeter of the gaze
+# square — up-left, up, up-right, right, down-right, down, down-left, left,
+# centre — so each direction occurs exactly ONCE and there is no near-equivalent
+# to prefer. All a large weight can do now is substitute a frame looking
+# somewhere else. Simulated over every pair of nine cursor targets and eight
+# starting positions:
 #
-#                         arrives (avg)   arrives (worst)   gaze error
-#   110-frame window            1.11s            2.13s          0.356
-#   all 240, no nearness        1.70s            2.98s          0.332
-#   all 240, nearness 2         1.06s            2.98s          0.305
-#   all 240, nearness 4         0.92s            2.05s          0.332
-#   all 240, nearness 16        0.74s            1.82s          0.424
+#             worst gaze error   exact hits
+#   4.0             1.414          17/72     <- a whole quadrant wrong
+#   1.0             0.708          30/72
+#   0.5             0.077          45/72
+#   0.25            0.047          61/72
+#   0               0.000          72/72
 #
-# 4 is the last value that is better than the shipping window on every column
-# at once. Past it the head arrives sooner by settling for a frame that is
-# visibly looking somewhere else.
-GAZE_NEARNESS = 4.0
+# and against the runtime's own walk, 0.25 costs 0.0018 of gaze error at worst
+# while bringing the head in sooner than 0 does — 1.46s against 1.60 on average
+# and 3.65 against 4.20 at worst. That is the whole of what it is still for.
+GAZE_NEARNESS = 0.25
 
 # --- gaze tracking --------------------------------------------------------
-# Measured out from the EYEBROWS, not at fixed pixel coordinates.
+# Taken from the choreography, anchored on frames read off the screen by eye.
 #
-# The earlier version read a fixed box and called the darkest mass in it the
-# pupil. Two things were wrong with that. The head drifts and changes scale
-# through the take, so the box slides off the eyes and the slide is read as
-# gaze; and the brow is both darker and larger than the iris, so what the box
-# actually measured, in most frames, was the eyebrow. Overlaying the detections
-# on the source shows the markers sitting on the brows, not the eyes.
+# Every earlier version of this measured the face and every one of them was
+# wrong. It read the iris inside a box hung off the eyebrows, which is a
+# perfectly sensible way to find where the EYES point inside the head — and
+# useless here, because this character looks with its head. Against nine frames
+# read by eye the detector correlated +0.63, explaining under half the variance,
+# and two attempts to settle its sign disagreed with each other (+0.51, -0.51).
+# Pupil-in-frame scored -0.41 and a silhouette yaw +0.21. None of the three was
+# good enough to ship, and no amount of tuning a landmark detector on a stylised
+# face behind glasses was going to fix that.
 #
-# Anchoring on the brow pair fixes both. The brows are the most reliable dark
-# landmark on this face, they move with the head, and the distance between them
-# gives the scale, so the eye boxes follow the head and every measurement can be
-# expressed in units of that distance instead of pixels.
-FACE_BOX = (120, 360, 480, 900)  # y0, y1, x0, x1: holds the face in every frame
-BROW_SIGMAS = (7, 9, 11)         # blob widths tried when hunting for the brows
-BROW_LEVEL = 14                  # px a brow pair may sit out of level
-BROW_GAP = (55, 130)             # px: any plausible distance between the brows
-BROW_TOLERANCE = 0.18            # how far a frame may sit from the take's median
-EYE_TOP = 0.10                   # eye box top, below the brow, in gap units
-EYE_SIZE = 0.62                  # eye box side, in gap units
-IRIS_DARK = 120                  # luminance below which a pixel counts as iris
-IRIS_FILL = (0.12, 0.62)         # share of the eye box that may be dark; outside
-                                 # it the eye is shut or the box has slipped off
-# How far a frame may sit from what its neighbours say, in eye-box fractions.
-# Eyes cannot cross the whole socket and come back inside one 24fps frame, so a
-# reading that disagrees with the frames either side is a misdetection, not a
-# movement. Worth doing even though the checks above catch most of it: two
-# frames slipped through into the first build and one of them, measured off a
-# brow the search had lost, became the sheet's furthest-UP frame — so every
-# cursor at the top of the page chose a frame picked by a bad measurement.
-# 0.05 sits between the 90th and 97th percentile of the deviation, and throws
-# out 19 of 240, the half-blinks among them.
-GAZE_JUMP = 0.05
+# So it is not measured any more. The clip was made to a script — one second per
+# direction, nine directions, in a known order — and the nine frames below were
+# picked off the running site by the person who commissioned it. Eight of the
+# nine fall inside the very second the script asked that direction for, and the
+# ninth is three frames past its block, which is the character still arriving.
+# That agreement between an independent reading and the shooting script is
+# stronger evidence than any detector produced.
+#
+# Anything not an anchor is interpolated between the two anchors either side.
+ANCHORS = [
+    (0, (0.0, 0.0)),      # the clip opens on centre, per the script
+    (47, (-1.0, 1.0)),    # up-left
+    (69, (0.0, 1.0)),     # up
+    (94, (1.0, 1.0)),     # up-right
+    (123, (1.0, 0.0)),    # right
+    (132, (1.0, -1.0)),   # down-right
+    (147, (0.0, -1.0)),   # down
+    (182, (-1.0, -1.0)),  # down-left
+    (200, (-1.0, 0.0)),   # left
+    (233, (0.0, 0.0)),    # and back to centre
+]
+
+# The head, generously — the box the motion between anchors is measured in.
+HEAD_BOX = (60, 400, 460, 820)  # y0, y1, x0, x1
+
+
+def read_gaze(paths):
+    """Where each frame looks, interpolated between the anchors above.
+
+    Not linear in the frame number. The character holds a direction and then
+    travels to the next one, so spacing the in-between frames evenly by index
+    would put a gaze on a still frame that it does not show. What parameterises
+    each leg instead is how much the head actually MOVED: the frame-to-frame
+    difference inside HEAD_BOX, accumulated. Frames where nothing moves stay
+    with their anchor, and the ones during a turn spread across the leg in
+    proportion to how far through the turn they are.
+
+    Raw pixels, no landmarks. That is the point — it is the one thing about
+    this footage that has never given a wrong answer.
+    """
+    heads = []
+    y0, y1, x0, x1 = HEAD_BOX
+    for path in paths:
+        im = np.asarray(Image.open(path).convert('L'), dtype=np.float32)
+        heads.append(im[y0:y1, x0:x1])
+
+    # How far the head moved into each frame from the one before it.
+    move = np.zeros(len(paths), np.float64)
+    for i in range(1, len(paths)):
+        move[i] = np.abs(heads[i] - heads[i - 1]).mean()
+    print(f'  head motion per frame: median {np.median(move[1:]):.2f}, '
+          f'peak {move.max():.2f} of 255')
+
+    out = np.zeros((len(paths), 2), np.float64)
+    anchors = [a for a in ANCHORS if a[0] < len(paths)]
+    for (ia, ga), (ib, gb) in zip(anchors, anchors[1:]):
+        leg = move[ia + 1 : ib + 1]
+        travelled = np.concatenate([[0.0], np.cumsum(leg)])
+        total = travelled[-1]
+        # A leg with no movement at all cannot be parameterised by movement;
+        # fall back to the frame number, which is what it degenerates to.
+        t = travelled / total if total > 0 else np.linspace(0, 1, len(travelled))
+        for k, index in enumerate(range(ia, ib + 1)):
+            out[index] = [ga[j] + (gb[j] - ga[j]) * t[k] for j in range(2)]
+    # Before the first anchor and after the last, hold that anchor's direction:
+    # the clip opens and closes on centre and does not move in those frames.
+    out[: anchors[0][0]] = anchors[0][1]
+    out[anchors[-1][0] :] = anchors[-1][1]
+    return out
 
 
 def run_ffmpeg(dst: Path) -> None:
@@ -204,125 +258,6 @@ def key_matte(path):
     return fg.astype(np.uint8), (alpha * 255).astype(np.uint8)
 
 
-def _blobs(lum):
-    """Dark blobs in the face box, over a few sizes."""
-    y0, y1, x0, x1 = FACE_BOX
-    sub = lum[y0:y1, x0:x1]
-    found = []
-    for sigma in BROW_SIGMAS:
-        # Scale-normalised Laplacian of Gaussian: peaks on dark blobs about
-        # sigma wide, whatever the surrounding skin happens to be lit to.
-        resp = ndi.gaussian_laplace(sub, sigma) * sigma ** 2
-        lab, n = ndi.label(resp > np.percentile(resp, 99.3))
-        for k in range(1, n + 1):
-            m = lab == k
-            if m.sum() < 25:
-                continue
-            cy, cx = ndi.center_of_mass(m)
-            found.append((cx + x0, cy + y0))
-    return found
-
-
-def _brows(blobs, gap_lo, gap_hi):
-    """The brow pair: the HIGHEST two blobs sitting level and a face apart.
-    Highest, because the only other pair that fits the description is the eyes,
-    and they are always lower."""
-    best = None
-    for i in range(len(blobs)):
-        for j in range(i + 1, len(blobs)):
-            (xi, yi), (xj, yj) = blobs[i], blobs[j]
-            if abs(yi - yj) > BROW_LEVEL or not gap_lo < abs(xi - xj) < gap_hi:
-                continue
-            height = (yi + yj) / 2
-            if best is None or height < best[0]:
-                left, right = sorted((blobs[i], blobs[j]))
-                best = (height, left, right)
-    return None if best is None else (best[1], best[2])
-
-
-def _iris(lum, brow, gap):
-    """Where the iris sits inside its own eye box, as a fraction of that box.
-
-    The box hangs off the brow and is sized by the brow gap, so this says where
-    the eye points within the head — which is the signal — rather than where the
-    head happens to be in frame, which is not."""
-    side = gap * EYE_SIZE
-    x0 = int(brow[0] - side / 2)
-    y0 = int(brow[1] + gap * EYE_TOP)
-    sub = lum[y0:int(y0 + side), x0:int(x0 + side)]
-    if sub.size == 0:
-        return None
-    m = sub < IRIS_DARK
-    fill = m.sum() / sub.size
-    if not IRIS_FILL[0] < fill < IRIS_FILL[1]:
-        return None            # blinked, or the box has slid off the eye
-    ys, xs = np.nonzero(m)
-    w = (IRIS_DARK - sub[ys, xs]).clip(1)
-    return (xs * w).sum() / w.sum() / side, (ys * w).sum() / w.sum() / side
-
-
-def read_gaze(paths):
-    """Where each frame looks, in units of the distance between the brows.
-
-    Two passes over the clip. The first learns how far apart the brows sit in
-    this take; the second measures again holding the gap near that, which is
-    what keeps the search off the hair and the glasses. Blinks are filled in
-    from the frames either side rather than dropped, so the result stays one
-    reading per source frame."""
-    lums = [np.asarray(Image.open(p).convert('L')).astype(np.float32) for p in paths]
-    blobs = [_blobs(l) for l in lums]
-
-    loose = [_brows(b, *BROW_GAP) for b in blobs]
-    spans = [r[1][0] - r[0][0] for r in loose if r]
-    if not spans:
-        sys.exit('no eyebrows found — check FACE_BOX against the source.')
-    median = float(np.median(spans))
-    lo, hi = median * (1 - BROW_TOLERANCE), median * (1 + BROW_TOLERANCE)
-    print(f'  brows sit {median:.0f}px apart; holding the gap to {lo:.0f}..{hi:.0f}')
-
-    pairs = [_brows(b, lo, hi) or loose[i] for i, b in enumerate(blobs)]
-    anchors = np.array([[np.nan] * 4 if p is None
-                        else [p[0][0], p[0][1], p[1][0], p[1][1]] for p in pairs])
-    where = np.arange(len(paths))
-    for axis in range(4):
-        col = anchors[:, axis]
-        seen = np.nonzero(~np.isnan(col))[0]
-        if not len(seen):
-            sys.exit('no eyebrows found — check FACE_BOX against the source.')
-        col = np.interp(where, seen, col[seen])
-        # The head moves smoothly, so a frame that disagrees with its
-        # neighbours is a misdetection rather than a movement.
-        anchors[:, axis] = ndi.median_filter(col, size=5, mode='nearest')
-
-    out = np.full((len(paths), 2), np.nan)
-    for i, lum in enumerate(lums):
-        lx, ly, rx, ry = anchors[i]
-        gap = rx - lx
-        eyes = [e for e in (_iris(lum, (lx, ly), gap), _iris(lum, (rx, ry), gap)) if e]
-        if eyes:
-            out[i] = np.mean(eyes, axis=0) - 0.5      # centre of the box is 0
-
-    blind = np.isnan(out[:, 0])
-    if blind.all():
-        sys.exit('no eyes found — check FACE_BOX against the source.')
-
-    def fill(mask):
-        seen = np.nonzero(~mask)[0]
-        for axis in range(2):
-            out[:, axis] = np.interp(where, seen, out[seen, axis])
-
-    fill(blind)
-    # Now that there is a reading for every frame, throw out the ones the rest
-    # of the clip disagrees with, and fill those in the same way.
-    smooth = np.stack([ndi.median_filter(out[:, k], size=5, mode='nearest')
-                       for k in range(2)], axis=1)
-    stray = np.hypot(*(out - smooth).T) > GAZE_JUMP
-    fill(blind | stray)
-    print(f'  {int(blind.sum())} unreadable and {int(stray.sum())} stray frame(s), '
-          'filled from their neighbours')
-    return out
-
-
 # The nine directions the window has to be able to answer, in normalised gaze.
 DIRECTIONS = [(-1, 1), (0, 1), (1, 1), (-1, 0), (0, 0), (1, 0), (-1, -1), (0, -1), (1, -1)]
 
@@ -344,35 +279,15 @@ def main():
         print('reading gaze…')
         g = read_gaze(frames)
 
-        # Normalise to -1..1 across the WHOLE clip, before choosing the window,
-        # so the window is judged against the full range the subject ever
-        # reaches rather than against its own.
-        lo, hi = g.min(0), g.max(0)
-        mid, half = (lo + hi) / 2, (hi - lo) / 2
-        norm_all = (g - mid) / half
-        # Both axes are negated, and the reason is empirical rather than
-        # derived: the frames this measurement calls the extremes are the
-        # opposite ones. Rendered large, the frame it scored at x=+1.00
-        # ("looking right") has the head turned and the pupils toward the
-        # viewer's LEFT, and the one at x=-1.00 has them right; live, both axes
-        # tracked backwards.
+        # No normalising and no sign to argue about: `read_gaze` already
+        # returns the runtime's own convention — x is +1 with the cursor to the
+        # viewer's RIGHT, y is +1 with it ABOVE (see useGazeTracking, which
+        # negates screen y for exactly this) — and the anchors are written at
+        # the extremes, so the range is -1..1 by construction.
         #
-        # The mechanism is that this character looks with its HEAD, not its
-        # eyes. Measured over the clip, the pupils travel 146.5px and the brows
-        # 146.0px — they move as one — while the iris-inside-a-brow-anchored-box
-        # residual this reads travels only 25.7px. So what is being measured is
-        # a small counter-rotation of the eye against a head that has already
-        # gone further, and it runs the other way.
-        #
-        # Two attempts to settle the sign by correlating against an independent
-        # reading of the face disagreed with each other (+0.51 and -0.51), the
-        # detector being unreliable on a stylised face behind glasses. The
-        # rendered frames are not ambiguous, so they decide it.
-        # X is negated and Y is simply left alone. Written out rather than
-        # applied as one `*= -1`, because the line this replaces already
-        # negated Y — negating it a second time is the identity, and doing that
-        # by accident left the vertical axis exactly as wrong as it was.
-        norm_all[:, 0] *= -1
+        # What used to be here was a normalise followed by a negation whose
+        # justification was empirical and, twice, wrong.
+        norm_all = g
 
         idx = list(range(len(frames)))
         print(f'keeping all {len(idx)} frames')
@@ -441,7 +356,14 @@ def main():
 
         # The frame closest to looking straight ahead. Where the character rests,
         # and the only frame a touch device ever needs.
-        neutral = int(np.argmin(GAZE_WEIGHT_X * norm[:, 0] ** 2 + norm[:, 1] ** 2))
+        # The LAST anchor written at dead centre, not the first and not the
+        # nearest. Two frames sit at (0, 0) — the clip opens on centre and
+        # returns to it — and `argmin` would take the opening one on the tie.
+        # The closing one is the settled pose, and it is the frame that was
+        # picked by eye as the character looking at the reader, which is what
+        # the still is for: it is the whole character on a touch device, and it
+        # is what a link preview and a search result show.
+        neutral = max(i for i, (x, y) in ANCHORS if x == 0.0 and y == 0.0)
 
         # A touch device cannot track a cursor, so it never loads the sheet —
         # which is also what keeps the sheet's size off the mobile budget.
