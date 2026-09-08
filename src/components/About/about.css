@@ -566,7 +566,7 @@
    masked for anyone whose browser never reaches the hook, and the text would
    simply be missing. Absent the attribute there is no mask at all, which is the
    correct fallback. */
-[data-line-reveal='on'] [data-lines] {
+[data-line-reveal] [data-lines] {
   -webkit-mask-image: linear-gradient(
     to bottom,
     #000 calc(var(--seen, 0px) - var(--feather, 1em)),
@@ -579,4 +579,22 @@
   );
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
+}
+
+/* Coming UP the page, the bottom of the block is what reaches the reader first,
+   so the mask is measured from the bottom edge instead — `to top` puts the
+   gradient's origin there, and `--seen` means the same thing from the other
+   end. The hook fills its counter from the matching end; the two have to agree
+   or the text would arrive at one end while being painted from the other. */
+[data-line-reveal='up'] [data-lines] {
+  -webkit-mask-image: linear-gradient(
+    to top,
+    #000 calc(var(--seen, 0px) - var(--feather, 1em)),
+    transparent var(--seen, 0px)
+  );
+  mask-image: linear-gradient(
+    to top,
+    #000 calc(var(--seen, 0px) - var(--feather, 1em)),
+    transparent var(--seen, 0px)
+  );
 }
