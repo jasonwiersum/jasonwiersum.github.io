@@ -42,12 +42,40 @@ const END = 0.1
  */
 const LEAD = 2
 
-/** The soft edge under the last arrived line, in line heights. Wide enough that
- *  the next line is visibly on its way in rather than switched on. */
-const FEATHER = 0.9
+/**
+ * The fastest the reveal is allowed to run, in lines per second.
+ *
+ * This is the fix for a reveal that was correct and still looked like nothing.
+ * Anchoring the mask to the block's passage across the screen made it span
+ * 500px of scroll instead of 150 — measurably line by line, and still invisible,
+ * because 500px is ONE flick of a trackpad. At any real scrolling speed the
+ * whole thing was over in about a third of a second, which is less than the
+ * 900ms `useReveal` spends fading the section's heading in. Hence the report
+ * that the text was there before the title.
+ *
+ * Scroll position still decides where the reveal is HEADED. What it no longer
+ * decides is how fast it gets there: the drawn edge chases that target at this
+ * rate, so a flick plays the reveal out over ~1.8s instead of collapsing it
+ * into one frame. The timeline's rail solves the same problem the same way —
+ * see GLIDE there.
+ *
+ * 9 keeps up with reading. A line is about 34px of scroll here, so the chase
+ * only starts trailing above ~300px/s, which is faster than anyone reads.
+ */
+const RATE = 9
+
+/** The soft edge under the drawn line, in line heights. About one, so exactly
+ *  one line is mid-fade at any moment and it fades over its own height rather
+ *  than being switched on. */
+const FEATHER = 1.1
 
 /**
  * Prose that fills in line by line as the page scrolls.
+ *
+ * Scroll position decides where the reveal is HEADED; the clock decides how
+ * fast it gets there. Both are needed. Scroll alone made the reveal correct and
+ * invisible — see RATE — because the distance a block takes to cross the screen
+ * is a distance a trackpad covers in one gesture.
  *
  * Every element carrying `data-lines` inside `scope` is masked, and the masks
  * are driven from ONE counter spanning all of them: the block reveals as a
@@ -105,55 +133,92 @@ export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: u
       return Number.parseFloat(style.fontSize) * 1.6
     }
 
+    // Where the reveal is headed, and where it has actually drawn to. They are
+    // two numbers because scroll decides the first and the clock decides the
+    // second — see RATE.
+    let drawn = 0
     let frame = 0
-    const draw = () => {
-      frame = 0
+    let clock = 0
+    let primed = false
+
+    /** How many lines the scroll position asks for, and how they divide up. */
+    const measure = () => {
       const height = window.innerHeight
       const line = lineBox(targets[0])
-      // How many lines each paragraph holds, and how far the block has come.
-      // Both read fresh every frame: the language switching or a font landing
-      // changes the wrapping, and nothing here caches a measurement across it.
+      // Read fresh every frame: the language switching or a font landing
+      // changes the wrapping, and nothing here caches across it.
       const counts = targets.map((el) =>
         Math.max(1, Math.round(el.getBoundingClientRect().height / line)),
       )
       const total = counts.reduce((sum, n) => sum + n, 0)
       const top = targets[0].getBoundingClientRect().top
-      const span = height * (START - END)
-      const progress = (height * START - top) / span
-
+      const progress = (height * START - top) / (height * (START - END))
       // Where the page has run out there is no scroll left to earn the rest
       // with — the same floor `useReveal` puts under its own entrance line.
-      const shown = atDocumentEnd() ? total : Math.floor(progress * total) + LEAD
+      const want = atDocumentEnd() ? total : progress * total + LEAD
+      return { line, counts, total, want: Math.min(Math.max(want, 0), total) }
+    }
 
-      let left = shown
+    const paint = (line: number, counts: number[]) => {
+      let left = drawn
       targets.forEach((el, index) => {
         const give = Math.min(Math.max(left, 0), counts[index])
         left -= counts[index]
-        // Whole lines only. A fractional edge creeping down a line of text is a
-        // wipe across the letters, which is a different effect and a worse one.
         el.style.setProperty('--seen', `${give * line}px`)
         el.style.setProperty('--feather', `${line * FEATHER}px`)
       })
     }
 
+    // One frame of the chase: close the distance at RATE lines a second, so the
+    // reveal takes the same time however violently the page was scrolled.
+    const step = (now: number) => {
+      const { line, counts, want } = measure()
+      // A backgrounded tab hands back one enormous delta on return; capping it
+      // means the reveal resumes from where it was rather than completing in a
+      // single frame.
+      const elapsed = Math.min(now - clock, 64) / 1000
+      clock = now
+      const limit = RATE * elapsed
+      const gap = want - drawn
+      drawn += Math.abs(gap) <= limit ? gap : Math.sign(gap) * limit
+      paint(line, counts)
+      // Half a line is not a thing anyone can see, and an exponential never
+      // arrives — without this the loop would run on an ever-halving remainder.
+      frame = Math.abs(want - drawn) < 0.01 ? 0 : requestAnimationFrame(step)
+    }
+
     const onScroll = () => {
       if (frame) return
-      frame = requestAnimationFrame(draw)
+      clock = performance.now()
+      frame = requestAnimationFrame(step)
     }
+
+    /** Straight to where it belongs, no chase. For the first paint and for
+     *  anything that moves the geometry rather than scrolls it: a page opened
+     *  half way down should arrive with the prose already there, not play its
+     *  reveal at someone who has not scrolled. */
+    const snap = () => {
+      const { line, counts, want } = measure()
+      drawn = want
+      paint(line, counts)
+      primed = true
+    }
+
+    const draw = () => (primed ? onScroll() : snap())
 
     draw()
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
+    window.addEventListener('resize', snap)
     // The text reflowing changes how many lines there are — a font landing, or
     // the language switching to longer sentences.
-    const resize = new ResizeObserver(onScroll)
+    const resize = new ResizeObserver(snap)
     for (const el of targets) resize.observe(el)
 
     return () => {
       if (frame) cancelAnimationFrame(frame)
       resize.disconnect()
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
+      window.removeEventListener('resize', snap)
       clear()
     }
   }, [scope, revision])
