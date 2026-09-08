@@ -9,18 +9,36 @@ import './timeline.css'
 gsap.registerPlugin(useGSAP)
 
 /**
- * The first dot's own arrival: it grows into place instead of simply being
- * there.
+ * Every dot's arrival: it grows into place instead of simply being there.
  *
- * Only the first. The other nine are reached by a line that is already drawn
- * and moving, so they are punctuation on something in motion; the first has
- * nothing before it, and popping into existence is what read as abrupt.
+ * All ten now, where this was the first one alone. The first was the only one
+ * with nothing before it, so it was the only one that read as abrupt — but
+ * growing suits the other nine too, and having one mechanism for all of them
+ * means the line cannot animate its points two different ways.
  *
  * Slightly past its size and back — `back.out` — because a dot that eases to
- * exactly 1 and stops reads as a fade, not as something arriving. The overshoot
- * is small and the whole thing is over in half a second.
+ * exactly 1 and stops reads as a fade, not as something arriving. Slower and
+ * gentler than the first-dot tween it replaces: 0.78s against 0.52, and
+ * `back.out(1.7)` against 2, which is about an 8% overshoot rather than 12%.
  */
-const FIRST_DOT = { duration: 0.52, ease: 'back.out(2)' }
+const DOT = { duration: 0.78, ease: 'back.out(1.7)' }
+
+/**
+ * How much further the line has to draw past a point, in px, before the next
+ * piece of that point's card arrives.
+ *
+ * The card no longer appears as one block. Its date comes with the dot, and
+ * the headline and the place are each earned by scrolling on — so a point
+ * assembles itself while it is read rather than landing complete.
+ *
+ * 34px is roughly a quarter of the gap between two points on a phone, so a
+ * card finishes well before the line reaches the next dot; slow enough to be a
+ * sequence, short enough that a reader never has to hunt for the rest of it.
+ */
+const PART = 34
+
+/** Pieces of a card that arrive one at a time: date, headline, place, detail. */
+const PARTS = 4
 
 /** The line the layout changes on — timeline.css uses the same number, so the
  *  rail moving to the left edge and the line drawing later happen together
@@ -112,7 +130,16 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
   /** Which points the line has reached. Index-keyed rather than a count: a page
    *  loaded halfway down has to be able to arrive with a run of them already
    *  true. */
-  const [shown, setShown] = useState<boolean[]>(() => milestones.map(() => false))
+  /**
+   * How far each point has come, as a small integer: 0 is not reached, 1 is the
+   * dot and its date, and each step after that is one more line of the card.
+   *
+   * One array rather than a boolean for the dot and a second number for the
+   * card, because both answers come from the same comparison — how far the line
+   * has drawn past this point — and two states written from one place can drift
+   * apart in a way one cannot.
+   */
+  const [stage, setStage] = useState<number[]>(() => milestones.map(() => 0))
   /** Reactive rather than read once: a phone turned on its side crosses this,
    *  and the reach line moves when it does. */
   const [phone, setPhone] = useState(
@@ -132,47 +159,59 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
    * that decides when a point is lit is the only one that can say so without
    * a second copy of that arithmetic.
    */
-  const last = shown[shown.length - 1] ?? false
+  const last = (stage[stage.length - 1] ?? 0) > 0
   useEffect(() => {
     onComplete?.(last)
   }, [last, onComplete])
 
   /**
-   * The first dot growing into place, on GSAP rather than on the transition the
-   * other nine use.
+   * Every dot growing into place, on GSAP.
    *
    * It animates a custom property, not the element: the dot is a pseudo-element
-   * (see timeline.css) and there is nothing there for a tween to hold. The
-   * stylesheet reads `--dot-scale` for the first point alone, so this drives it
-   * without the other nine noticing.
+   * (see timeline.css) and there is nothing there for a tween to hold. Every
+   * `.timeline__item` carries its own `--dot-scale` and the stylesheet reads it
+   * for all of them, so one effect drives the whole line.
+   *
+   * `played` is what stops a dot restarting every time a LATER dot lights.
+   * `useGSAP` reverts the previous run's tweens when its dependencies change,
+   * which puts an already-grown dot back to nothing — so a dot that has had its
+   * tween is SET to 1 here rather than skipped. Returning early instead is the
+   * bug that leaves every earlier point invisible the moment the next one
+   * arrives.
    *
    * `fromTo` rather than `to`, because scrolling back up and down again has to
    * replay it — a `to` from a value already at 1 would do nothing the second
    * time. Under `prefers-reduced-motion` it is set rather than tweened: growth
    * is travel, which is the thing that preference is about, and the dot still
-   * has the card's own cross-fade arriving beside it.
+   * has its card's cross-fade arriving beside it.
    */
-  const firstShown = shown[0] ?? false
+  const litKey = stage.map((value) => (value > 0 ? '1' : '0')).join('')
+  const played = useRef<boolean[]>([])
   useGSAP(
     () => {
-      const item = wrap.current?.querySelector<HTMLLIElement>('.timeline__item')
-      if (!item) return
+      const items = wrap.current?.querySelectorAll<HTMLLIElement>('.timeline__item')
+      if (!items) return
       const budget = motionBudget()
-      if (!firstShown) {
-        gsap.set(item, { '--dot-scale': 0 })
-        return
-      }
-      if (budget.reduced) {
-        gsap.set(item, { '--dot-scale': 1 })
-        return
-      }
-      gsap.fromTo(
-        item,
-        { '--dot-scale': 0 },
-        { '--dot-scale': 1, duration: FIRST_DOT.duration, ease: FIRST_DOT.ease },
-      )
+      items.forEach((item, index) => {
+        if (!(stage[index] > 0)) {
+          played.current[index] = false
+          gsap.set(item, { '--dot-scale': 0 })
+          return
+        }
+        if (budget.reduced || played.current[index]) {
+          played.current[index] = true
+          gsap.set(item, { '--dot-scale': 1 })
+          return
+        }
+        played.current[index] = true
+        gsap.fromTo(
+          item,
+          { '--dot-scale': 0 },
+          { '--dot-scale': 1, duration: DOT.duration, ease: DOT.ease },
+        )
+      })
     },
-    { dependencies: [firstShown] },
+    { dependencies: [litKey] },
   )
 
   useEffect(() => {
@@ -241,12 +280,20 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
       // Read off the same value the fill is drawn from, so a point cannot light
       // before the line visibly reaches it — the smoothing carries the cards
       // with it rather than running ahead of the line.
-      setShown((previous) => {
+      setStage((previous) => {
         let changed = false
         const next = dots.map((offset, index) => {
-          const lit = drawn >= offset
-          if (lit !== previous[index]) changed = true
-          return lit
+          // 0 until the line arrives, 1 for the bare dot, and one more piece
+          // of the card for every PART of line drawn beyond it. The dot has
+          // that first PART to itself: it is what gives the date something to
+          // arrive after, and it is a distance rather than a delay so that the
+          // three lines can only ever appear in their own order — a delay on
+          // the date alone loses that race the moment a reader scrolls quickly
+          // enough to cross the headline's threshold before it elapses.
+          const past = drawn - offset
+          const value = past < 0 ? 0 : 1 + Math.min(PARTS, Math.floor(past / PART))
+          if (value !== previous[index]) changed = true
+          return value
         })
         return changed ? next : previous
       })
@@ -342,7 +389,7 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
               // narrow screen CSS ignores this and stacks everything to the
               // right of the rail — see timeline.css.
               data-side={index % 2 === 0 ? 'left' : 'right'}
-              data-shown={shown[index] || undefined}
+              data-shown={stage[index] > 0 || undefined}
               data-emphasis={milestone.emphasis || undefined}
             >
               {/* The last point is where Jason is now, and it is the only one
@@ -351,12 +398,25 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
                 <span className="timeline__pulse" aria-hidden="true" />
               ) : null}
 
+              {/* The card assembles itself as the line draws past. `data-in`
+                  is one gate per line of it, and the order is the order they
+                  are read in: when, then what, then where. Each waits on a
+                  further PART of drawn line, the dot having the first one to
+                  itself, so the order holds at any scroll speed. */}
               <div className="timeline__card">
-                <p className="timeline__period">{milestone.period}</p>
-                <h4 className="timeline__label">{milestone.label[language]}</h4>
-                <p className="timeline__place">{milestone.place}</p>
+                <p className="timeline__period" data-in={stage[index] >= 2 || undefined}>
+                  {milestone.period}
+                </p>
+                <h4 className="timeline__label" data-in={stage[index] >= 3 || undefined}>
+                  {milestone.label[language]}
+                </h4>
+                <p className="timeline__place" data-in={stage[index] >= 4 || undefined}>
+                  {milestone.place}
+                </p>
                 {milestone.detail ? (
-                  <p className="timeline__detail">{milestone.detail[language]}</p>
+                  <p className="timeline__detail" data-in={stage[index] >= 5 || undefined}>
+                    {milestone.detail[language]}
+                  </p>
                 ) : null}
               </div>
             </li>
