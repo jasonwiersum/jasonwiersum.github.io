@@ -35,6 +35,7 @@ const es = {
     openSettings: 'Abrir ajustes',
     closeSettings: 'Cerrar ajustes',
     character: 'Ilustración decorativa: un personaje que sigue el cursor con la mirada.',
+    characterStill: 'Jason Wiersum, ilustración del personaje del sitio.',
     replayGreeting: 'Repetir el saludo',
   },
   nav: {
@@ -172,6 +173,7 @@ const en: Translation = {
     openSettings: 'Open settings',
     closeSettings: 'Close settings',
     character: 'Decorative illustration: a character whose gaze follows the cursor.',
+    characterStill: "Jason Wiersum, the site's character illustration.",
     replayGreeting: 'Play the greeting again',
   },
   nav: {
@@ -300,6 +302,7 @@ const de: Translation = {
     openSettings: 'Einstellungen öffnen',
     closeSettings: 'Einstellungen schließen',
     character: 'Dekorative Illustration: eine Figur, deren Blick dem Mauszeiger folgt.',
+    characterStill: 'Jason Wiersum, Illustration der Figur dieser Website.',
     replayGreeting: 'Begrüßung noch einmal abspielen',
   },
   nav: {

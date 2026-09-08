@@ -9,7 +9,7 @@ checkout needs none of these tools.
 
 Output:
     public/character/frames.webp                 the clip, in order, one sheet
-    public/character/still.webp                  one frame, for touch devices
+    public/character/still-<hash>.webp           one frame, for touch devices
     src/components/Character/manifest.json       sheet geometry + per-frame gaze
 
 The frames are kept IN THE ORDER THEY WERE FILMED, evenly spaced through the
@@ -25,6 +25,8 @@ element presents a fraction of the frames asked for; a sheet is one decode and
 then a transform per frame, which is exact and costs nothing.
 """
 import argparse
+import hashlib
+import io
 import json
 import shutil
 import subprocess
@@ -367,15 +369,38 @@ def main():
 
         # A touch device cannot track a cursor, so it never loads the sheet —
         # which is also what keeps the sheet's size off the mobile budget.
-        still = OUT_DIR / 'still.webp'
+        #
+        # The filename carries a hash of the bytes, the way Vite names the JS
+        # and CSS it emits, and that is not about browser caching: GitHub Pages
+        # sends max-age=600 here, so a browser is never more than ten minutes
+        # stale. It is about the OTHER caches, the ones with no revalidation and
+        # no way to ask.
+        #
+        # This image is the first thing on the page under mobile-first indexing,
+        # which is how Google crawls, so it is the thumbnail beside the search
+        # result and the image a chat app unfurls. Those copies live on their
+        # servers and refresh on their schedule — weeks, for a site this size.
+        # At a fixed `still.webp` there is nothing to tell them the picture
+        # changed, and one did stay wrong for exactly that reason. A filename
+        # they have never seen has no cached copy to serve.
         n = neutral
-        sheet.crop(((n % cols) * cw, (n // cols) * ch,
-                    (n % cols) * cw + cw, (n // cols) * ch + ch)) \
-             .save(still, 'WEBP', quality=args.quality + 8, method=6)
+        crop = sheet.crop(((n % cols) * cw, (n // cols) * ch,
+                           (n % cols) * cw + cw, (n // cols) * ch + ch))
+        buffer = io.BytesIO()
+        crop.save(buffer, 'WEBP', quality=args.quality + 8, method=6)
+        payload = buffer.getvalue()
+        still_name = f'still-{hashlib.sha256(payload).hexdigest()[:8]}.webp'
+        # Every earlier still goes. They are unreachable once the manifest names
+        # the new one, and leaving them would publish a growing pile of stale
+        # portraits that a crawler is perfectly able to find and index.
+        for stale in OUT_DIR.glob('still*.webp'):
+            stale.unlink()
+        still = OUT_DIR / still_name
+        still.write_bytes(payload)
 
         manifest = {
             'sprite': 'frames.webp',
-            'still': 'still.webp',
+            'still': still_name,
             'frameWidth': cw,
             'frameHeight': ch,
             'columns': cols,

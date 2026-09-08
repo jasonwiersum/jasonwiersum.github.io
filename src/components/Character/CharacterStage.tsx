@@ -911,7 +911,14 @@ export function CharacterStage() {
         data-covered={filmShowing || undefined}
         ref={sheet}
         src={src}
-        alt=""
+        // Empty on the sheet, named on the still, because they are two
+        // different pictures behind one element. The sheet is a 15x16 grid of
+        // every frame of the clip — a mechanism, described instead by the
+        // hidden line below — while the still is a portrait, and it is the
+        // first image on the page under the mobile-first crawl, so it is what
+        // a search result shows. Naming the subject is the only signal Google
+        // has for who that is.
+        alt={tracks ? '' : t.a11y.characterStill}
         draggable={false}
         decoding="async"
         style={
@@ -1062,7 +1069,10 @@ export function CharacterStage() {
           aria-label={t.a11y.replayGreeting}
         />
       ) : null}
-      <p className="visually-hidden">{t.a11y.character}</p>
+      {/* Only where there IS a cursor. On a touch device this sentence
+          describes something that cannot happen, and the still now carries its
+          own alt, so saying both would announce the character twice. */}
+      {tracks ? <p className="visually-hidden">{t.a11y.character}</p> : null}
     </div>
   )
 }
