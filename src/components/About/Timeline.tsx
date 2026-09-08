@@ -9,19 +9,44 @@ import './timeline.css'
 gsap.registerPlugin(useGSAP)
 
 /**
- * Every dot's arrival: it grows into place instead of simply being there.
+ * Every dot's arrival: it grows out of its own centre to full size.
  *
- * All ten now, where this was the first one alone. The first was the only one
- * with nothing before it, so it was the only one that read as abrupt — but
- * growing suits the other nine too, and having one mechanism for all of them
- * means the line cannot animate its points two different ways.
+ * Two keyframes rather than one `back.out`, and that is the whole point of the
+ * shape. `back.out` is heavily front-loaded — a fifth of the way through the
+ * duration it is already three quarters of the way to full size — so however
+ * long you make it, what a reader sees is a pop and then a wobble, not
+ * something growing. The growth has to occupy the middle of the curve, which is
+ * what `power2.inOut` does: slow away from nothing, quick through the middle,
+ * slow into place.
  *
- * Slightly past its size and back — `back.out` — because a dot that eases to
- * exactly 1 and stops reads as a fade, not as something arriving. Slower and
- * gentler than the first-dot tween it replaces: 0.78s against 0.52, and
- * `back.out(1.7)` against 2, which is about an 8% overshoot rather than 12%.
+ * The bounce is then a separate, smaller move at the end: 12% past full size
+ * and back. It reads as settling rather than as overshoot, and it is the only
+ * part `back.out` was ever contributing.
+ *
+ * The dot scales about the point the line passes through. `translate(-50%,-50%)`
+ * resolves against the UNSCALED box, so whatever the scale, the element's
+ * centre lands on the same coordinate — it opens out of that point instead of
+ * growing away from a corner.
  */
-const DOT = { duration: 0.78, ease: 'back.out(1.7)' }
+const DOT = {
+  grow: { scale: 1.12, duration: 0.62, ease: 'power2.inOut' },
+  settle: { duration: 0.34, ease: 'power2.out' },
+  /**
+   * With the preference set it still grows, and that is a deliberate reading of
+   * `motionBudget` rather than a bypass of it. What the budget removes is
+   * travel, because distance provokes discomfort; a 12px dot going from nothing
+   * to 12px is not distance. What it caps is duration, so this is 0.45s — the
+   * budget's own ceiling — and the overshoot goes, since a bounce is the one
+   * part of this that is decoration rather than the idea.
+   *
+   * The alternative shipped for a while and was wrong: CSS pinned the dot at
+   * scale(1) and cross-faded its opacity instead, so under the preference the
+   * dots appeared at full size rather than arriving. Measured, `--dot-scale`
+   * never left its final value and the pseudo-element ran 0.75, 0.92, 0.98 of
+   * opacity — a fade wearing the name of a grow.
+   */
+  reduced: { duration: 0.45, ease: 'power2.out' },
+}
 
 /**
  * How much further the line has to draw past a point, in px, before the next
@@ -198,16 +223,32 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
           gsap.set(item, { '--dot-scale': 0 })
           return
         }
-        if (budget.reduced || played.current[index]) {
-          played.current[index] = true
+        if (played.current[index]) {
           gsap.set(item, { '--dot-scale': 1 })
           return
         }
         played.current[index] = true
+        if (budget.reduced) {
+          gsap.fromTo(
+            item,
+            { '--dot-scale': 0 },
+            { '--dot-scale': 1, duration: DOT.reduced.duration, ease: DOT.reduced.ease },
+          )
+          return
+        }
         gsap.fromTo(
           item,
           { '--dot-scale': 0 },
-          { '--dot-scale': 1, duration: DOT.duration, ease: DOT.ease },
+          {
+            keyframes: [
+              {
+                '--dot-scale': DOT.grow.scale,
+                duration: DOT.grow.duration,
+                ease: DOT.grow.ease,
+              },
+              { '--dot-scale': 1, duration: DOT.settle.duration, ease: DOT.settle.ease },
+            ],
+          },
         )
       })
     },
