@@ -143,7 +143,7 @@ export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: u
     }
 
     const rate = motionBudget().reduced ? RATE_REDUCED : RATE
-    root.dataset.lineReveal = 'on'
+    root.dataset.lineReveal = 'down'
 
     /** The resolved line box of an element, in px. `line-height: normal`
      *  computes to the keyword rather than a length, so the font size carries
@@ -154,6 +154,25 @@ export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: u
       if (Number.isFinite(resolved) && resolved > 0) return resolved
       return Number.parseFloat(style.fontSize) * 1.6
     }
+
+    /**
+     * Which edge the block is coming in through, and therefore which end of the
+     * prose fills first.
+     *
+     * Latched, and only ever re-decided while the block is COMPLETELY off
+     * screen — below the fold means the next entrance is a downward one, above
+     * it means an upward one. Reading the scroll direction frame by frame
+     * instead would flip the reveal inside out every time a reader nudged the
+     * wheel backwards mid-paragraph.
+     *
+     * It matters because the section reads differently from each side. Coming
+     * down the page the heading arrives first and the prose follows it. Coming
+     * up from the contact form the bottom of the block is what appears at the
+     * top of the screen first, so filling from the top would be filling the end
+     * the reader cannot see yet — and the heading, which is the last thing to
+     * arrive that way, cannot be what the prose waits for.
+     */
+    let dir: 'down' | 'up' = 'down'
 
     // Where the reveal is headed, and where it has actually drawn to. They are
     // two numbers because scroll decides the first and the clock decides the
@@ -196,23 +215,49 @@ export function useLineReveal(scope: RefObject<HTMLElement | null>, revision?: u
       )
       const total = counts.reduce((sum, n) => sum + n, 0)
       const top = targets[0].getBoundingClientRect().top
-      const progress = (height * START - top) / (height * (START - END))
+      const bottom = targets[targets.length - 1].getBoundingClientRect().bottom
+
+      // Re-decide the direction only from completely outside, then hold it.
+      if (top >= height) dir = 'down'
+      else if (bottom <= 0) dir = 'up'
+
+      // Mirrored, so a block entering through either edge crosses the same
+      // stretch of screen before it is complete: on the way down the block's
+      // TOP travels from START to END, on the way up its BOTTOM travels from
+      // 1 - START to 1 - END.
+      const span = height * (START - END)
+      const progress =
+        dir === 'down'
+          ? (height * START - top) / span
+          : (bottom - height * (1 - START)) / span
+
+      // The heading gate is for the downward entrance only. Upward, the heading
+      // is the last thing on screen rather than the first, so waiting for it
+      // would hold the prose back until the whole block had already passed the
+      // reader — which is what it did, measured: the block crossed the entire
+      // viewport with nothing drawn.
+      const held = dir === 'down' && !arrived()
       // Where the page has run out there is no scroll left to earn the rest
       // with — the same floor `useReveal` puts under its own entrance line.
-      const want = !arrived() ? 0 : atDocumentEnd() ? total : progress * total + LEAD
-      const rect = targets[0].getBoundingClientRect()
-      const onScreen = rect.bottom > 0 && rect.top < height
+      const want = held ? 0 : atDocumentEnd() ? total : progress * total + LEAD
+      const onScreen = bottom > 0 && top < height
       return { line, counts, total, onScreen, want: Math.min(Math.max(want, 0), total) }
     }
 
     const paint = (line: number, counts: number[]) => {
+      // The counter is spent from the end the reader is arriving at, so coming
+      // up the page the last paragraph fills first. The mask's own gradient is
+      // flipped to match by `data-line-reveal` — see about.css.
+      const order = dir === 'up' ? [...targets].reverse() : targets
+      const sizes = dir === 'up' ? [...counts].reverse() : counts
       let left = drawn
-      targets.forEach((el, index) => {
-        const give = Math.min(Math.max(left, 0), counts[index])
-        left -= counts[index]
+      order.forEach((el, index) => {
+        const give = Math.min(Math.max(left, 0), sizes[index])
+        left -= sizes[index]
         el.style.setProperty('--seen', `${give * line}px`)
         el.style.setProperty('--feather', `${line * FEATHER}px`)
       })
+      root.dataset.lineReveal = dir
     }
 
     // One frame of the chase: close the distance at RATE lines a second, so the
