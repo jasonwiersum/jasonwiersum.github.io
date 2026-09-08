@@ -56,9 +56,20 @@ export function useGazeTracking(
 
       // Radial dead zone, then rescale what is left so the response still
       // reaches the extremes — a plain cut would waste the first tenth of travel.
+      //
+      // The dead zone is radial so that a parked cursor cannot drift the head
+      // in any direction, but the RESCALE must not be: capping the vector's
+      // length at 1 turns a square reach into a unit circle, and a circle has
+      // no corners. With that cap the pointer in the top-left of the window
+      // asked for (-0.64, +0.77) rather than (-1, +1), so the four diagonal
+      // frames could not be chosen at all — measured, the corners settled 9 to
+      // 14 frames short of the ones they should reach.
+      //
+      // Only the dead zone comes out here. Each axis is capped on its own by
+      // the MAX_GAZE clamp below, which is where that job belonged all along.
       const len = Math.hypot(dx, dy)
       let scale = 0
-      if (len > DEAD_ZONE) scale = Math.min(1, (len - DEAD_ZONE) / (1 - DEAD_ZONE)) / len
+      if (len > DEAD_ZONE) scale = (len - DEAD_ZONE) / len / (1 - DEAD_ZONE)
       target.current = {
         x: clamp(dx * scale, -MAX_GAZE, MAX_GAZE),
         y: clamp(-dy * scale, -MAX_GAZE, MAX_GAZE), // screen y grows downward
