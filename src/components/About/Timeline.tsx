@@ -49,20 +49,27 @@ const DOT = {
 }
 
 /**
- * How much further the line has to draw past a point, in px, before the next
- * piece of that point's card arrives.
+ * How much of the way to the NEXT point a card has finished assembling, as a
+ * fraction of the distance between the two.
  *
- * The card no longer appears as one block. Its date comes with the dot, and
- * the headline and the place are each earned by scrolling on — so a point
- * assembles itself while it is read rather than landing complete.
+ * A fraction and not a fixed number of pixels, which is what this replaces. At
+ * a flat 34px per line the last line of a four-line card landed 136px past its
+ * dot — and measured on the real page the points sit 122 to 195px apart on a
+ * desktop and 108 to 197 on a phone, so on every tight pair the card was still
+ * assembling itself after the line had already reached the next point.
  *
- * 34px is roughly a quarter of the gap between two points on a phone, so a
- * card finishes well before the line reaches the next dot; slow enough to be a
- * sequence, short enough that a reader never has to hunt for the rest of it.
+ * Tied to each point's own gap, every card finishes at the same place in its
+ * own stretch of rail whatever that stretch measures, on a phone as on a
+ * desktop. 0.82 puts the last line in just before the line arrives at the next
+ * dot, which is where it was asked for.
+ *
+ * The pieces divide that span between them, so a card with no detail line
+ * spreads three across it rather than leaving a gap where the fourth would be.
  */
-const PART = 34
+const SPREAD = 0.82
 
-/** Pieces of a card that arrive one at a time: date, headline, place, detail. */
+/** Pieces of a card that arrive one at a time: date, headline, place, and the
+ *  detail where a point has one. */
 const PARTS = 4
 
 /** The line the layout changes on — timeline.css uses the same number, so the
@@ -270,8 +277,10 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
     const items = Array.from(box.querySelectorAll<HTMLLIElement>('.timeline__item'))
     if (items.length === 0) return
 
-    /** Each dot's distance down the rail, and how tall the last item is. */
+    /** Each dot's distance down the rail, the room each has before the next
+     *  one, and how tall the last item is. */
     let dots: number[] = []
+    let spans: number[] = []
 
     // The rail has to stop on the last dot, not at the foot of the last card —
     // a rail as tall as the list overshot it by the height of that card's text
@@ -283,6 +292,13 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
       const last = items[items.length - 1]
       box.style.setProperty('--last-h', `${last.offsetHeight}px`)
       dots = items.map((item) => item.offsetTop - items[0].offsetTop)
+      // The last point has no next one to measure against, so it borrows the
+      // gap above it — it is the only card with no deadline of its own.
+      spans = dots.map((offset, index) =>
+        index + 1 < dots.length
+          ? dots[index + 1] - offset
+          : Math.max(offset - (dots[index - 1] ?? 0), 1),
+      )
     }
 
     /** Where the line has drawn to, in px down the rail. Its own value rather
@@ -332,7 +348,12 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
           // the date alone loses that race the moment a reader scrolls quickly
           // enough to cross the headline's threshold before it elapses.
           const past = drawn - offset
-          const value = past < 0 ? 0 : 1 + Math.min(PARTS, Math.floor(past / PART))
+          // A card with no detail spreads three pieces over the same run of
+          // rail rather than four, so every point finishes at SPREAD of the way
+          // to the next one whether it has three lines or four.
+          const pieces = milestones[index].detail ? PARTS : PARTS - 1
+          const step = (spans[index] * SPREAD) / pieces
+          const value = past < 0 ? 0 : 1 + Math.min(pieces, Math.floor(past / step))
           if (value !== previous[index]) changed = true
           return value
         })
