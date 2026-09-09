@@ -349,10 +349,14 @@
   font: inherit;
   text-align: start;
   cursor: pointer;
+  /* Colour only. There was a 2px nudge to the right on hover as well, and on a
+     touch screen it stayed there: `:hover` sticks to the last thing tapped, so
+     a row a reader had opened sat permanently displaced beside the three that
+     had not. Nothing about a list of documents needs the row to move — the
+     border and the fill say "this one" on their own. */
   transition:
     border-color 220ms var(--ease-out),
-    background-color 220ms var(--ease-out),
-    transform 220ms var(--ease-out);
+    background-color 220ms var(--ease-out);
 }
 
 .docs__row:hover,
@@ -371,10 +375,6 @@
    where the padding leaves room for it at any width. */
 .docs__row:focus-visible {
   outline-offset: -2px;
-}
-
-.docs__row:hover {
-  transform: translateX(2px);
 }
 
 .docs__row svg {
@@ -396,13 +396,6 @@
   font-family: var(--font-mono);
   font-size: var(--text-micro);
   color: var(--muted);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .docs__row,
-  .docs__row:hover {
-    transform: none;
-  }
 }
 
 /* Shown where the browser has no PDF viewer of its own — most phones. An empty
