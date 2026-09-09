@@ -59,9 +59,19 @@ export function CvDialog({ origin, onClose }: Props) {
               {t.projects.back}
             </button>
 
-            <a className="dialog__back" href={SITE.cv} download>
+            {/* Icon only in the bar. The label is what made this wrap onto a
+                second line on a phone — measured, the bar was 90px there
+                against 39 on a desktop, and every one of those 51px came off
+                the viewer. `aria-label` carries the words the button no longer
+                shows, and `title` puts them back on hover for a pointer. */}
+            <a
+              className="dialog__back dialog__back--icon"
+              href={SITE.cv}
+              download
+              aria-label={t.about.cv}
+              title={t.about.cv}
+            >
               <Download size={15} strokeWidth={2} aria-hidden="true" />
-              {t.about.cv}
             </a>
           </div>
 

@@ -280,7 +280,11 @@
 .dialog__body--cv {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  /* 0.75rem, down from 1rem. The bar above is now one short row on every width,
+     so the space that separated it from the document is doing less work than it
+     was — and everything it gives back goes to the viewer, which is the part
+     anybody opened this to look at. */
+  gap: var(--space-3);
   max-width: none;
   height: 100%;
 }
@@ -293,6 +297,16 @@
 
 .cv__bar .dialog__back {
   margin-block-end: 0;
+}
+
+/* The download control in the bar: the icon and nothing else, so the bar holds
+   one line at any width. Square rather than a shortened pill — the border
+   radius is already a pill, so equal padding around a 15px icon rounds it to a
+   disc that reads as a sibling of the back button rather than a stunted copy
+   of it. The words are not lost: they are on `aria-label` and on `title`. */
+.dialog__back--icon {
+  gap: 0;
+  padding-inline: 0.62rem;
 }
 
 .cv__doc {
