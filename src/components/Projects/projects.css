@@ -361,6 +361,18 @@
   background: var(--background-elevated);
 }
 
+/* The focus ring is drawn INSIDE the row. Globally it sits 3px outside the box,
+   and `.docs` scrolls — which makes it a clipping box on both axes, not just
+   the one it was given. On a phone the rows run the full width, so that ring's
+   right edge landed outside the container and was cut off: tapping a document
+   made its own row look truncated.
+
+   A negative offset puts the same 2px ring inside the row's own border box,
+   where the padding leaves room for it at any width. */
+.docs__row:focus-visible {
+  outline-offset: -2px;
+}
+
 .docs__row:hover {
   transform: translateX(2px);
 }
