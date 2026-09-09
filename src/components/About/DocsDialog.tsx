@@ -76,9 +76,14 @@ export function DocsDialog({ origin, onClose }: Props) {
             {/* Only where there is a file to offer. On the two list steps the
                 bar would otherwise carry a download button for nothing. */}
             {doc && group ? (
-              <a className="dialog__back" href={docUrl(group, doc)} download>
+              <a
+                className="dialog__back dialog__back--icon"
+                href={docUrl(group, doc)}
+                download
+                aria-label={`${t.about.docsDownload}: ${doc.label}`}
+                title={t.about.docsDownload}
+              >
                 <Download size={15} strokeWidth={2} aria-hidden="true" />
-                {t.about.docsDownload}
               </a>
             ) : null}
           </div>
