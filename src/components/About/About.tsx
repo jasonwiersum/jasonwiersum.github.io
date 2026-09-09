@@ -97,7 +97,7 @@ function Cv({ ready }: { ready: boolean }) {
         {hasDocs ? (
           <button
             type="button"
-            className="reveal-btn"
+            className="reveal-btn reveal-btn--docs"
             ref={docsButton}
             onClick={() => {
               setDocsOrigin(docsButton.current?.getBoundingClientRect() ?? null)

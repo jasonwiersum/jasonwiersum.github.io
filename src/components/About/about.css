@@ -378,13 +378,15 @@
    the left `--rb-pad + --rb-badge` of the pill, so half of that column is the
    shift that puts the label in the middle of what is actually empty.
 
-   Only this one by choice, not because the other is different: the view
-   button's shorter label reads fine where it is.
+   Opted into per button rather than applied to all three: the view button's
+   label is short enough that the room it sits in is nearly the whole pill, so
+   the shift would take it past the middle instead of onto it.
 
    A transform and not a margin or a padding: all three move the label, but
    only a transform is outside layout, so the pill keeps the width it sizes
    itself to from its longest label. */
-.reveal-btn--download {
+.reveal-btn--download,
+.reveal-btn--docs {
   --rb-shift: calc((var(--rb-pad) + var(--rb-badge)) / 2);
 }
 
@@ -499,10 +501,10 @@
        label sitting slightly right of centre. So the label is centred in the
        room it has rather than in the pill. */
     padding-inline: calc(var(--rb-pad) + var(--rb-badge) + var(--rb-gap)) 0.7rem;
-    /* Cancels the download button's shift. The asymmetric padding above
+    /* Cancels the shift on the buttons that opt into it. The asymmetric padding above
        already puts the label in the middle of the free room here (measured
        1.7px off), so the transform would only overshoot. Same specificity as
-       `.reveal-btn--download`, so this works by sitting later in the file —
+       the rule that sets it, so this works by sitting later in the file —
        see the note on this media query above. `0px` and not `0`: it is fed
        to a calc() on hover. */
     --rb-shift: 0px;
