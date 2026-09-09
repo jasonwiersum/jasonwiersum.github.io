@@ -41,6 +41,46 @@
   line-height: var(--leading-relaxed);
   text-align: justify;
   hyphens: auto;
+
+  /* The entrance the paragraphs used to get from `data-reveal`, moved into CSS
+     so the block can hold it back until the heading has finished — see
+     About.tsx. Same lift and the same curve `useReveal` uses, so nothing about
+     how they arrive changes; only when. */
+  opacity: 0;
+  transform: translate3d(0, 1.375rem, 0);
+  transition:
+    opacity 900ms var(--ease-out),
+    transform 900ms var(--ease-out);
+}
+
+.about__prose[data-shown] p {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+/* One after another, at the 160ms `useReveal` puts between two siblings
+   arriving together. On the shown state only, so scrolling back up they leave
+   as one rather than queueing on the way out. */
+.about__prose[data-shown] p:nth-child(2) {
+  transition-delay: 160ms;
+}
+
+.about__prose[data-shown] p:nth-child(3) {
+  transition-delay: 320ms;
+}
+
+.about__prose[data-shown] p:nth-child(n + 4) {
+  transition-delay: 480ms;
+}
+
+/* Travel goes, the cross-fade and the order stay — `motionBudget` caps the
+   hook's own tweens at 450ms under the preference, and these follow it. */
+@media (prefers-reduced-motion: reduce) {
+  .about__prose p,
+  .about__prose[data-shown] p {
+    transform: none;
+    transition-duration: 450ms;
+  }
 }
 
 /* --- Facts panel --------------------------------------------------------- */
@@ -543,58 +583,4 @@
 [data-theme='dark'] .about__prose p,
 [data-theme='dark'] .about__tagline {
   color: var(--foreground);
-}
-
-/* --- Prose arriving a line at a time ------------------------------------- */
-
-/* The mask `useLineReveal` drives.
-
-   `--seen` is how far down the paragraph the reader has earned, and `--feather`
-   is the soft edge — which sits ABOVE that mark and ENDS on it, not below it.
-   The direction is the whole of this rule and it was wrong.
-
-   Written the other way — `#000 var(--seen), transparent calc(var(--seen) +
-   feather)` — the first stop is opaque AT var(--seen), so with `--seen` at 0
-   the gradient is `#000 0px, transparent 32px`: the very top of the element is
-   fully painted and fades away over the next 32px. Every paragraph therefore
-   showed its own first line, half grey, before the section had arrived at all.
-   Ending the fade on the mark instead means `--seen: 0` paints nothing, which
-   is what nothing revealed should look like.
-
-   Gated on `[data-line-reveal='on']`, which the hook puts on the section only
-   once it has decided to run. Without that gate a paragraph would sit fully
-   masked for anyone whose browser never reaches the hook, and the text would
-   simply be missing. Absent the attribute there is no mask at all, which is the
-   correct fallback. */
-[data-line-reveal] [data-lines] {
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 calc(var(--seen, 0px) - var(--feather, 1em)),
-    transparent var(--seen, 0px)
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    #000 calc(var(--seen, 0px) - var(--feather, 1em)),
-    transparent var(--seen, 0px)
-  );
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-}
-
-/* Coming UP the page, the bottom of the block is what reaches the reader first,
-   so the mask is measured from the bottom edge instead — `to top` puts the
-   gradient's origin there, and `--seen` means the same thing from the other
-   end. The hook fills its counter from the matching end; the two have to agree
-   or the text would arrive at one end while being painted from the other. */
-[data-line-reveal='up'] [data-lines] {
-  -webkit-mask-image: linear-gradient(
-    to top,
-    #000 calc(var(--seen, 0px) - var(--feather, 1em)),
-    transparent var(--seen, 0px)
-  );
-  mask-image: linear-gradient(
-    to top,
-    #000 calc(var(--seen, 0px) - var(--feather, 1em)),
-    transparent var(--seen, 0px)
-  );
 }

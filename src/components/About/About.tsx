@@ -2,7 +2,7 @@ import { Download, Eye } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { SITE } from '../../config/site'
 import { useLanguage } from '../../hooks/useLanguage'
-import { useLineReveal } from '../../hooks/useLineReveal'
+import { motionBudget } from '../../hooks/usePrefersReducedMotion'
 import { useReveal } from '../../hooks/useReveal'
 import { useRevealed } from '../../hooks/useRevealed'
 import { CvDialog } from './CvDialog'
@@ -110,14 +110,49 @@ function Portrait({ alt }: { alt: string }) {
   )
 }
 
+/** How long `useReveal` takes over one entrance, in ms. Its own default, and
+ *  the wait the prose serves so the heading is finished and not merely started
+ *  before the first paragraph moves. */
+const REVEAL_MS = 900
+
 export function About() {
-  const { t, language } = useLanguage()
+  const { t } = useLanguage()
   const root = useRef<HTMLDivElement>(null)
   useReveal(root)
-  /** The prose is the one thing in the section that does not arrive in blocks.
-   *  Keyed on the language: different sentences wrap differently, so the
-   *  paragraphs are different heights and hold a different number of lines. */
-  useLineReveal(root, language)
+
+  /**
+   * The heading arrives, and only then the paragraphs under it.
+   *
+   * Document order alone very nearly does this already — the heading sits above
+   * the prose, so it crosses the entrance line first and `useReveal` staggers a
+   * group in the order it finds it. What it does not give is a guarantee: the
+   * two cross within about a tenth of a second of each other at reading speed,
+   * against the 900ms an entrance takes, so the paragraphs were fading up while
+   * the heading was still mostly transparent and the pair read as arriving
+   * together.
+   *
+   * So the prose waits on the heading twice over: for it to cross the same line
+   * (`useRevealed` reports exactly that, using `useReveal`'s own band so there
+   * is one answer), and then for its entrance to finish. The gate is read on
+   * the way in and ignored on the way out, which is what `useRevealed` is for —
+   * scrolling back up, the prose leaves on its own account rather than waiting
+   * for the heading again.
+   */
+  const [titleBox, titleShown] = useRevealed()
+  const [afterTitle, setAfterTitle] = useState(false)
+  useEffect(() => {
+    if (!titleShown) {
+      setAfterTitle(false)
+      return
+    }
+    // Capped with everything else under `prefers-reduced-motion`: the order is
+    // the point and the waiting is not, so the wait shortens with the entrance
+    // it is waiting for rather than outliving it.
+    const wait = motionBudget().duration(REVEAL_MS / 1000) * 1000
+    const timer = window.setTimeout(() => setAfterTitle(true), wait)
+    return () => window.clearTimeout(timer)
+  }, [titleShown])
+  const [proseBox, proseShown] = useRevealed(afterTitle)
   /** Whether the line has reached the point it ends on. Everything below the
    *  line waits for it, so neither "read the whole history" nor the figures
    *  summing it up can arrive before the history has finished drawing.
@@ -135,21 +170,18 @@ export function About() {
       <div className="container">
         <div className="about__grid">
           <div className="about__main">
-            <h2 className="section__title" data-reveal>
+            <h2 className="section__title" ref={titleBox} data-reveal>
               {t.about.title}
             </h2>
 
-            {/* `data-lines` rather than `data-reveal`: these arrive a line at
-                a time as the page scrolls, not a paragraph at a time. The mask
-                that does it is in about.css and the arithmetic is in
-                `useLineReveal` — which is a mask and not a span per line
-                because this column is justified and hyphenated, and neither
-                survives being cut into one block per line. */}
-            <div className="about__prose">
+            {/* `data-shown` on the block rather than `data-reveal` on each
+                paragraph: the paragraphs still arrive one after another, but
+                the whole run is held until the heading above them has finished.
+                A `data-reveal` cannot be held — `useReveal` animates whatever
+                it finds, on its own schedule. */}
+            <div className="about__prose" ref={proseBox} data-shown={proseShown || undefined}>
               {t.about.paragraphs.map((paragraph, index) => (
-                <p key={index} data-lines>
-                  {paragraph}
-                </p>
+                <p key={index}>{paragraph}</p>
               ))}
             </div>
 
