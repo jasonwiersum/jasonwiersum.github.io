@@ -42,10 +42,13 @@ public/
 ├── character/         frames.webp · still.webp — built, do not edit by hand
 │                      wave.mp4 — optional, played once on touch devices
 ├── cv/                the CV offered for download in About
-└── images/            final.mp4 (character source) · portrait · project shots
+└── images/            portrait · project shots
+
+source-media/          build inputs, never served — see its README
+└── final-chroma.mp4   the character's source footage
 
 scripts/
-└── build-character.py final.mp4 → frames.webp + still.webp + manifest.json
+└── build-character.py final-chroma.mp4 → frames.webp + still.webp + manifest.json
 ```
 
 The page has four sections — `#home`, `#work`, `#about`, `#contact` — in one
@@ -56,7 +59,7 @@ item is detected with an `IntersectionObserver`.
 
 ## The character
 
-A 2D character taken from `public/images/final.mp4`. There is no 3D: no
+A 2D character taken from `source-media/final-chroma.mp4`. There is no 3D: no
 Three.js, no WebGL, no canvas. It is one `<img>` — a sheet holding the clip's
 frames in order — and the cursor decides where in the clip to be.
 

@@ -3,7 +3,7 @@
  * Character tuning — everything adjustable lives here
  * ===========================================================================
  *
- * The character is the whole of `public/images/final-chroma.mp4`, kept as a
+ * The character is the whole of `source-media/final-chroma.mp4`, kept as a
  * sheet of frames in filming order (`scripts/build-character.py`). The cursor
  * does not pick a picture: it picks a position in that recording, and the
  * runtime walks there one frame at a time, so what plays is recorded movement.

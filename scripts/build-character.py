@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turn public/images/final.mp4 into the hero character's frame sheet.
+"""Turn source-media/final-chroma.mp4 into the hero character's frame sheet.
 
 Run this only to regenerate the assets; the output is committed, so a normal
 checkout needs none of these tools.
@@ -38,7 +38,11 @@ import numpy as np
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
-SOURCE = ROOT / 'public' / 'images' / 'final-chroma.mp4'
+# Outside `public/`, deliberately. Everything under `public/` is copied verbatim
+# into `dist/`, so while it lived there the 5MB of source footage was published
+# on every deploy — reachable by anyone who guessed the URL, and never once
+# requested by the site. It is a build input, not a site asset.
+SOURCE = ROOT / 'source-media' / 'final-chroma.mp4'
 OUT_DIR = ROOT / 'public' / 'character'
 # The manifest is small and the app needs it before the first paint, so it is
 # bundled from src/ rather than fetched at runtime.
@@ -410,7 +414,7 @@ def main():
             'gazeWeightX': GAZE_WEIGHT_X,
             'gazeNearness': GAZE_NEARNESS,
             'gaze': [[round(float(a), 4), round(float(b), 4)] for a, b in norm],
-            'source': 'images/final-chroma.mp4',
+            'source': 'source-media/final-chroma.mp4',
         }
         MANIFEST.parent.mkdir(parents=True, exist_ok=True)
         MANIFEST.write_text(json.dumps(manifest))
