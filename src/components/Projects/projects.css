@@ -300,13 +300,24 @@
 }
 
 /* The download control in the bar: the icon and nothing else, so the bar holds
-   one line at any width. Square rather than a shortened pill — the border
-   radius is already a pill, so equal padding around a 15px icon rounds it to a
-   disc that reads as a sibling of the back button rather than a stunted copy
-   of it. The words are not lost: they are on `aria-label` and on `title`. */
+   one line at any width. The words are not lost — they are on `aria-label` and
+   on `title`.
+
+   Round, and a circle rather than a rounded rectangle: `aspect-ratio` takes the
+   width from the height the row already gives it, so it stays a disc whatever
+   the bar's font size works out to. Padding is dropped for the same reason —
+   with the width derived, padding would only fight it.
+
+   `margin-inline-start: auto` pushes it to the far end of the bar, away from
+   the back button. They do different things and one of them is destructive of
+   nothing while the other leaves the document; putting the whole width between
+   them makes that hard to do by accident. */
 .dialog__back--icon {
   gap: 0;
-  padding-inline: 0.62rem;
+  padding: 0;
+  aspect-ratio: 1;
+  justify-content: center;
+  margin-inline-start: auto;
 }
 
 .cv__doc {
@@ -443,6 +454,17 @@
   color: var(--foreground);
   border-color: var(--border-strong);
   background: var(--surface-sunken);
+}
+
+/* Pressed, or focused by keyboard: the accent border, the same answer the
+   document rows give. `:hover` deliberately keeps the quieter grey — it fires
+   on nothing more than a cursor passing over, and on a touch screen it sticks
+   to the last thing tapped, so an accent there would leave a button looking
+   permanently chosen. Pressing is a decision; hovering is not. */
+.dialog__back:active,
+.dialog__back:focus-visible {
+  border-color: var(--accent);
+  color: var(--foreground);
 }
 
 .dialog__head {
