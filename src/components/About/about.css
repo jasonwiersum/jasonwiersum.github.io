@@ -472,6 +472,22 @@
 @media (max-width: 32rem) {
   .about__cv-actions {
     width: 100%;
+    /* Two columns and wrap, rather than one row shared three ways. The row is
+       an auto-flow COLUMN grid on a wide screen, which puts every button on one
+       line — at three buttons that is 115px each on a 390px phone, and
+       "Zeugnisse und Zertifizierungen" was being cut off inside its pill. */
+    grid-auto-flow: row;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* The certificates button takes the whole second row. It carries by far the
+     longest label of the three and there is nothing for it to sit beside once
+     the CV pair has taken the first row. `:last-child:nth-child(3)` is the
+     three-button case exactly; `:only-child` covers a missing CV, where it is
+     the only thing here. */
+  .about__cv-actions > :last-child:nth-child(3),
+  .about__cv-actions > :only-child {
+    grid-column: 1 / -1;
   }
 
   .reveal-btn {

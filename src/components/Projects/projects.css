@@ -304,6 +304,95 @@
   background: var(--surface-sunken);
 }
 
+/* --- The certificate picker ---------------------------------------------- */
+
+/* The two list steps in front of the viewer: which kind, then which document.
+   They stand in the same box the PDF occupies, so the panel does not resize
+   between steps — `flex: 1` and `min-height: 0` are what the <object> uses. */
+.docs {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-block-start: var(--space-2);
+}
+
+.docs__title {
+  font-size: var(--text-lg);
+  font-weight: 560;
+  letter-spacing: -0.02em;
+  margin-block-end: var(--space-4);
+}
+
+.docs__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 34rem;
+}
+
+/* A row, not a button that looks like one: full width, the label taking the
+   room and the chevron parked at the end, so a list of four reads as a list
+   rather than as four controls of different widths. */
+.docs__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    border-color 220ms var(--ease-out),
+    background-color 220ms var(--ease-out),
+    transform 220ms var(--ease-out);
+}
+
+.docs__row:hover,
+.docs__row:focus-visible {
+  border-color: var(--accent);
+  background: var(--background-elevated);
+}
+
+.docs__row:hover {
+  transform: translateX(2px);
+}
+
+.docs__row svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.docs__row-label {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* How many documents are behind a group, so the first step says what it is
+   offering rather than making the reader open both to find out. */
+.docs__row-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .docs__row,
+  .docs__row:hover {
+    transform: none;
+  }
+}
+
 /* Shown where the browser has no PDF viewer of its own — most phones. An empty
    frame would be worse than an honest offer of the file. */
 .cv__fallback {

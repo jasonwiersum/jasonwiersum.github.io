@@ -1,11 +1,13 @@
-import { Download, Eye } from 'lucide-react'
+import { BookOpen, Download, Eye } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { SITE } from '../../config/site'
+import { DOC_GROUPS } from '../../data/documents'
 import { useLanguage } from '../../hooks/useLanguage'
 import { motionBudget } from '../../hooks/usePrefersReducedMotion'
 import { useReveal } from '../../hooks/useReveal'
 import { useRevealed } from '../../hooks/useRevealed'
 import { CvDialog } from './CvDialog'
+import { DocsDialog } from './DocsDialog'
 import { Timeline } from './Timeline'
 import './about.css'
 
@@ -26,7 +28,13 @@ function Cv({ ready }: { ready: boolean }) {
   const [available, setAvailable] = useState(false)
   const [origin, setOrigin] = useState<DOMRect | null>(null)
   const [open, setOpen] = useState(false)
+  const [docsOrigin, setDocsOrigin] = useState<DOMRect | null>(null)
+  const [docsOpen, setDocsOpen] = useState(false)
   const viewButton = useRef<HTMLButtonElement>(null)
+  const docsButton = useRef<HTMLButtonElement>(null)
+  /** Whether there is anything behind the certificates button at all. A
+   *  constant, since the list is declared rather than discovered. */
+  const hasDocs = DOC_GROUPS.some((group) => group.docs.length > 0)
 
   useEffect(() => {
     let cancelled = false
@@ -44,7 +52,9 @@ function Cv({ ready }: { ready: boolean }) {
     }
   }, [])
 
-  if (!available) return null
+  // The certificates do not depend on the CV existing, so a missing CV must not
+  // take them off the page with it — it only takes its own two buttons.
+  if (!available && !hasDocs) return null
 
   return (
     /* `data-shown` rather than `data-reveal`, because this block has a
@@ -56,32 +66,57 @@ function Cv({ ready }: { ready: boolean }) {
       <p className="about__cv-intro">{t.about.cvIntro}</p>
 
       <div className="about__cv-actions">
-        <button
-          type="button"
-          className="reveal-btn"
-          ref={viewButton}
-          onClick={() => {
-            setOrigin(viewButton.current?.getBoundingClientRect() ?? null)
-            setOpen(true)
-          }}
-        >
-          <span className="reveal-btn__badge" aria-hidden="true" />
-          <span className="reveal-btn__icon" aria-hidden="true">
-            <Eye size={17} strokeWidth={1.9} />
-          </span>
-          <span className="reveal-btn__label">{t.about.cvView}</span>
-        </button>
+        {available ? (
+          <>
+            <button
+              type="button"
+              className="reveal-btn"
+              ref={viewButton}
+              onClick={() => {
+                setOrigin(viewButton.current?.getBoundingClientRect() ?? null)
+                setOpen(true)
+              }}
+            >
+              <span className="reveal-btn__badge" aria-hidden="true" />
+              <span className="reveal-btn__icon" aria-hidden="true">
+                <Eye size={17} strokeWidth={1.9} />
+              </span>
+              <span className="reveal-btn__label">{t.about.cvView}</span>
+            </button>
 
-        <a className="reveal-btn reveal-btn--download" href={SITE.cv} download>
-          <span className="reveal-btn__badge" aria-hidden="true" />
-          <span className="reveal-btn__icon" aria-hidden="true">
-            <Download size={17} strokeWidth={1.9} />
-          </span>
-          <span className="reveal-btn__label">{t.about.cv}</span>
-        </a>
+            <a className="reveal-btn reveal-btn--download" href={SITE.cv} download>
+              <span className="reveal-btn__badge" aria-hidden="true" />
+              <span className="reveal-btn__icon" aria-hidden="true">
+                <Download size={17} strokeWidth={1.9} />
+              </span>
+              <span className="reveal-btn__label">{t.about.cv}</span>
+            </a>
+          </>
+        ) : null}
+
+        {hasDocs ? (
+          <button
+            type="button"
+            className="reveal-btn"
+            ref={docsButton}
+            onClick={() => {
+              setDocsOrigin(docsButton.current?.getBoundingClientRect() ?? null)
+              setDocsOpen(true)
+            }}
+          >
+            <span className="reveal-btn__badge" aria-hidden="true" />
+            <span className="reveal-btn__icon" aria-hidden="true">
+              <BookOpen size={17} strokeWidth={1.9} />
+            </span>
+            <span className="reveal-btn__label">{t.about.docsView}</span>
+          </button>
+        ) : null}
       </div>
 
       {open ? <CvDialog origin={origin} onClose={() => setOpen(false)} /> : null}
+      {docsOpen ? (
+        <DocsDialog origin={docsOrigin} onClose={() => setDocsOpen(false)} />
+      ) : null}
     </div>
   )
 }
