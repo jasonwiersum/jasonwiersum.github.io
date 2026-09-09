@@ -190,8 +190,15 @@ export function Timeline({ onComplete }: { onComplete?: (done: boolean) => void 
    * Passing the fact up rather than having About watch the DOM: the component
    * that decides when a point is lit is the only one that can say so without
    * a second copy of that arithmetic.
+   *
+   * "Reached" is the last point's card being FINISHED, not its dot lighting.
+   * A dot lighting only means the line has arrived; the card under it is still
+   * assembling for another 0.82 of the gap above it — so with the old test the
+   * CV block came in over the top of the final point writing itself, which is
+   * the same complaint the test was added to answer, one step later.
    */
-  const last = (stage[stage.length - 1] ?? 0) > 0
+  const done = milestones.length - 1
+  const last = (stage[done] ?? 0) >= 1 + (milestones[done].detail ? PARTS : PARTS - 1)
   useEffect(() => {
     onComplete?.(last)
   }, [last, onComplete])

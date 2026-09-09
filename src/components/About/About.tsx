@@ -115,6 +115,22 @@ function Portrait({ alt }: { alt: string }) {
  *  before the first paragraph moves. */
 const REVEAL_MS = 900
 
+/**
+ * How long the last timeline card takes to finish writing itself once the line
+ * has passed its final threshold, in ms.
+ *
+ * 300 of delay plus 620 of fade, both from the card-line rules in timeline.css.
+ * Duplicated here rather than plumbed through because what the CV is waiting
+ * for is a CSS transition in another component, and a number with the two
+ * halves named beside it is easier to keep true than an event listener reaching
+ * across the boundary.
+ *
+ * Not run through `motionBudget`: those rules have no reduced-motion variant,
+ * so the transition is 920ms whatever the preference, and a shorter wait would
+ * put the CV back on top of the text it is meant to follow.
+ */
+const LAST_CARD_MS = 920
+
 export function About() {
   const { t } = useLanguage()
   const root = useRef<HTMLDivElement>(null)
@@ -153,6 +169,25 @@ export function About() {
     return () => window.clearTimeout(timer)
   }, [titleShown])
   const [proseBox, proseShown] = useRevealed(afterTitle)
+
+  /**
+   * Once the paragraphs are in, they stay in.
+   *
+   * `useRevealed` takes them back out when they leave the band, which every
+   * other block on the page wants — a heading or a panel replays its entrance
+   * and that reads as the page being alive. Body copy is not that. Scrolling
+   * back up to re-read a sentence meant scrolling almost to the heading before
+   * the paragraphs would come back, because the entrance line they answer to
+   * is near the top of the screen and they had genuinely been unshown.
+   *
+   * So this latches. It is deliberately one-way and never resets: the reader
+   * has already seen these words, and there is nothing to reveal to them a
+   * second time.
+   */
+  const [proseStays, setProseStays] = useState(false)
+  useEffect(() => {
+    if (proseShown) setProseStays(true)
+  }, [proseShown])
   /** Whether the line has reached the point it ends on. Everything below the
    *  line waits for it, so neither "read the whole history" nor the figures
    *  summing it up can arrive before the history has finished drawing.
@@ -163,7 +198,28 @@ export function About() {
    *  are still on screen, and hanging their exits on that would take the pair
    *  of them out together. */
   const [pathDone, setPathDone] = useState(false)
-  const [factsBox, factsShown] = useRevealed(pathDone)
+
+  /**
+   * The line reaching its last point is not the same as that point being
+   * READ-able, and the CV block has to wait for the second.
+   *
+   * `pathDone` goes true when the last card's final threshold is crossed —
+   * which is the moment its last line is TOLD to appear, not the moment it is
+   * there. Measured before this wait: the CV block was at 0.44 opacity with all
+   * four lines of the closing point still at zero. So the invitation to read
+   * the whole history was, again, arriving over the top of the history.
+   */
+  const [pathSettled, setPathSettled] = useState(false)
+  useEffect(() => {
+    if (!pathDone) {
+      setPathSettled(false)
+      return
+    }
+    const timer = window.setTimeout(() => setPathSettled(true), LAST_CARD_MS)
+    return () => window.clearTimeout(timer)
+  }, [pathDone])
+
+  const [factsBox, factsShown] = useRevealed(pathSettled)
 
   return (
     <div className="about" ref={root}>
@@ -179,7 +235,7 @@ export function About() {
                 the whole run is held until the heading above them has finished.
                 A `data-reveal` cannot be held — `useReveal` animates whatever
                 it finds, on its own schedule. */}
-            <div className="about__prose" ref={proseBox} data-shown={proseShown || undefined}>
+            <div className="about__prose" ref={proseBox} data-shown={proseStays || undefined}>
               {t.about.paragraphs.map((paragraph, index) => (
                 <p key={index}>{paragraph}</p>
               ))}
@@ -214,7 +270,7 @@ export function About() {
             neither of them stretches now that the room is wider. */}
         <Timeline onComplete={setPathDone} />
 
-        <Cv ready={pathDone} />
+        <Cv ready={pathSettled} />
 
         {/* Full width, under both columns: the facts read as one row of labelled
             values rather than a narrow stack beside the portrait. The heading
