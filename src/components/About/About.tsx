@@ -20,7 +20,7 @@ import './about.css'
  * button at all.
  */
 function Cv({ ready }: { ready: boolean }) {
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   /** On the same lines as everything else on the page, but not until the line
    *  above it has finished — see `useRevealed`. */
   const [box, shown] = useRevealed(ready)
@@ -96,7 +96,16 @@ function Cv({ ready }: { ready: boolean }) {
         {hasDocs ? (
           <button
             type="button"
-            className="reveal-btn reveal-btn--docs"
+            /* The label shift is German-only. It centres the label in the room
+               the badge leaves rather than in the pill, which is right for
+               "Zeugnisse und Zertifizierungen" — long enough that the pill is
+               mostly label — and wrong for "Ver certificados" and "View
+               certificates", which are short enough that the free room is
+               nearly the whole pill and the shift would carry them past the
+               middle instead of onto it. That is the same reasoning the view
+               button already sits out for; see `.reveal-btn--download` in
+               about.css. */
+            className={`reveal-btn${language === 'de' ? ' reveal-btn--docs' : ''}`}
             ref={docsButton}
             onClick={() => {
               setDocsOrigin(docsButton.current?.getBoundingClientRect() ?? null)

@@ -331,16 +331,20 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* The download button alone: its label is centred in the room the badge
-   leaves, not in the pill. Dead-centre in the pill is what read as
-   off-centre — the disc eats the left side, so the label sat with 13.6px of
-   air between it and the disc and 57px on the other side. The badge occupies
-   the left `--rb-pad + --rb-badge` of the pill, so half of that column is the
-   shift that puts the label in the middle of what is actually empty.
+/* The long labels: centred in the room the badge leaves, not in the pill.
+   Dead-centre in the pill is what read as off-centre — the disc eats the left
+   side, so the label sat with 13.6px of air between it and the disc and 57px
+   on the other side. The badge occupies the left `--rb-pad + --rb-badge` of
+   the pill, so half of that column is the shift that puts the label in the
+   middle of what is actually empty.
 
-   Opted into per button rather than applied to all three: the view button's
-   label is short enough that the room it sits in is nearly the whole pill, so
-   the shift would take it past the middle instead of onto it.
+   Opted into per button, and for the certificates button per language, rather
+   than applied to all three: a short label leaves free room that is nearly the
+   whole pill, so the shift would take it past the middle instead of onto it.
+   That is why the view button sits it out at every length, and why the
+   certificates button only takes it for the German "Zeugnisse und
+   Zertifizierungen" and not for "Ver certificados" or "View certificates" —
+   About.tsx decides which.
 
    A transform and not a margin or a padding: all three move the label, but
    only a transform is outside layout, so the pill keeps the width it sizes
