@@ -290,9 +290,15 @@
 }
 
 .cv__bar {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
+  /* Room kept clear on the right for the download control, which is out of
+     flow and therefore cannot push anything aside for itself. Unconditional:
+     on the steps without one it is invisible dead space at the end of a row
+     whose only child is left-aligned. */
+  padding-inline-end: 3rem;
 }
 
 .cv__bar .dialog__back {
@@ -303,21 +309,27 @@
    one line at any width. The words are not lost — they are on `aria-label` and
    on `title`.
 
-   Round, and a circle rather than a rounded rectangle: `aspect-ratio` takes the
-   width from the height the row already gives it, so it stays a disc whatever
-   the bar's font size works out to. Padding is dropped for the same reason —
-   with the width derived, padding would only fight it.
+   Out of flow, pinned to both edges of the bar, and that is what keeps the bar
+   one height. In flow it sized itself first and the row followed: measured, the
+   back button stood 38.8px tall on the two list steps and 45.8 beside this one,
+   so it visibly grew the moment a document opened. Absolute with `inset-block:
+   0` inverts the dependency — the row is sized by the text control alone, this
+   takes its height from the row, and `aspect-ratio` takes the width from that
+   height. A circle exactly as tall as its neighbour, at any font size, with no
+   number written down anywhere.
 
-   `margin-inline-start: auto` pushes it to the far end of the bar, away from
-   the back button. They do different things and one of them is destructive of
-   nothing while the other leaves the document; putting the whole width between
-   them makes that hard to do by accident. */
+   At the far end, away from the back button. They do different things and one
+   of them leaves the document; putting the width of the bar between them makes
+   that hard to do by accident. */
 .dialog__back--icon {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
   gap: 0;
+  margin: 0;
   padding: 0;
   aspect-ratio: 1;
   justify-content: center;
-  margin-inline-start: auto;
 }
 
 .cv__doc {

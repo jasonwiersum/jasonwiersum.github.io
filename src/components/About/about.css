@@ -41,46 +41,6 @@
   line-height: var(--leading-relaxed);
   text-align: justify;
   hyphens: auto;
-
-  /* The entrance the paragraphs used to get from `data-reveal`, moved into CSS
-     so the block can hold it back until the heading has finished — see
-     About.tsx. Same lift and the same curve `useReveal` uses, so nothing about
-     how they arrive changes; only when. */
-  opacity: 0;
-  transform: translate3d(0, 1.375rem, 0);
-  transition:
-    opacity 900ms var(--ease-out),
-    transform 900ms var(--ease-out);
-}
-
-.about__prose[data-shown] p {
-  opacity: 1;
-  transform: translate3d(0, 0, 0);
-}
-
-/* One after another, at the 160ms `useReveal` puts between two siblings
-   arriving together. On the shown state only, so scrolling back up they leave
-   as one rather than queueing on the way out. */
-.about__prose[data-shown] p:nth-child(2) {
-  transition-delay: 160ms;
-}
-
-.about__prose[data-shown] p:nth-child(3) {
-  transition-delay: 320ms;
-}
-
-.about__prose[data-shown] p:nth-child(n + 4) {
-  transition-delay: 480ms;
-}
-
-/* Travel goes, the cross-fade and the order stay — `motionBudget` caps the
-   hook's own tweens at 450ms under the preference, and these follow it. */
-@media (prefers-reduced-motion: reduce) {
-  .about__prose p,
-  .about__prose[data-shown] p {
-    transform: none;
-    transition-duration: 450ms;
-  }
 }
 
 /* --- Facts panel --------------------------------------------------------- */

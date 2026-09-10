@@ -114,13 +114,45 @@ export function useReveal(
         entering = []
         leaving = []
 
-        if (shown.length > 0) {
-          gsap.to(shown, {
+        // Grouped by `data-reveal-after`, which is seconds an element waits
+        // before its entrance — nothing, for everything that does not carry it.
+        //
+        // It exists for one case: the About prose, which has to arrive after
+        // the heading above it has FINISHED and not merely started. Document
+        // order almost does that on its own, since the heading is higher up and
+        // a group is staggered in the order it is found, but the two cross this
+        // line within about a tenth of a second of each other at reading speed
+        // against the 900ms an entrance takes, so they read as arriving
+        // together.
+        //
+        // A delay and not a separate mechanism, so those paragraphs keep every
+        // other thing this hook does — the same curve, the same stagger between
+        // them, and above all the same exit, which travels back the way the
+        // element came. That last part is why an earlier attempt at gating them
+        // through `useRevealed` was wrong: it could hold them back, but it left
+        // them leaving downwards whichever edge they had gone out of.
+        //
+        // Grouped rather than set per tween because a stagger applies across a
+        // group, and elements sharing a delay should still stagger against each
+        // other rather than all landing at once.
+        const waves = new Map<number, HTMLElement[]>()
+        for (const el of shown) {
+          const after = Number(el.dataset.revealAfter ?? 0) || 0
+          const wave = waves.get(after)
+          if (wave) wave.push(el)
+          else waves.set(after, [el])
+        }
+
+        for (const [after, wave] of waves) {
+          gsap.to(wave, {
             opacity: 1,
             y: 0,
             duration: budget.duration(duration),
             ease: 'power2.inOut',
             stagger: budget.stagger(stagger),
+            // Capped with everything else under the preference: the order is
+            // the point, the waiting is not.
+            delay: budget.duration(after),
             overwrite: 'auto',
           })
         }
