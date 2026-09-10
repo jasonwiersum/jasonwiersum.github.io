@@ -24,7 +24,7 @@ working under any GitHub Pages base path.
 
 ## The character's source footage is not here
 
-It used to be. `final.mp4` and `final-chroma.mp4` now live in `source-media/`
-at the root of the repository, because everything under `public/` is copied
-verbatim into `dist/` and those 5.1 MB were being published on every deploy
-without the site ever asking for them. See `source-media/README.md`.
+It used to be. `final-chroma.mp4` now lives in `source-media/` at the root of
+the repository, because everything under `public/` is copied verbatim into
+`dist/` and it was being published on every deploy without the site ever asking
+for it. See `source-media/README.md`.

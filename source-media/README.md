@@ -3,14 +3,14 @@
 Build inputs. Nothing here is served, and nothing here is copied into `dist/`.
 
 That is the whole reason the folder exists. Everything under `public/` is copied
-verbatim into the build, so while these files lived in `public/images/` their
+verbatim into the build, so while the footage lived in `public/images/` its
 5.1 MB was published on every deploy — sitting at a guessable URL, counted
-against nothing, and never once requested by the site. They are inputs to
-`scripts/build-character.py`, not assets of the page.
+against nothing, and never once requested by the site. It is an input to
+`scripts/build-character.py`, not an asset of the page.
 
-Keep them. The character can be rebuilt from them at a different frame count,
-size or quality without having to source the footage again; delete them and that
-stops being possible.
+Keep it. The character can be rebuilt from it at a different frame count, size
+or quality without having to source the footage again; delete it and that stops
+being possible.
 
 ## `final-chroma.mp4` — the character, and the one in use
 
@@ -22,17 +22,14 @@ green out, and writes:
 - `public/character/still-<hash>.webp` — the resting frame, for touch devices
 - `src/components/Character/manifest.json` — sheet geometry and per-frame gaze
 
-## `final.mp4` — the first take, kept for reference
+## `final.mp4` — the first take, deleted
 
-The original recording, shot against a pale grey. It is **not** what the
-character is built from any more and nothing points at it.
+The original recording, shot against a pale grey, is gone: it was never what
+the character is built from and nothing pointed at it.
 
-It was replaced because the backdrop came within about 8 levels of the cream
-jumper, so no threshold could separate them: the matte had to be argued for with
-a polynomial fit and a hysteresis flood, and it still came out with the hair as
-a staircase and a collar of backdrop attached. The green-screen take retired all
-of that machinery.
-
-Kept because it is the only copy, and because the two takes are the same
-performance — if the character ever needs a frame the chroma take does not
-have, this is where it would come from.
+It lost that job because the backdrop came within about 8 levels of the cream
+jumper, so no threshold could separate them — the matte had to be argued for
+with a polynomial fit and a hysteresis flood, and it still came out with the
+hair as a staircase and a collar of backdrop attached. The green-screen take
+retired all of that machinery, and keeping 2.8 MB of superseded footage in the
+history of a static site bought nothing.
