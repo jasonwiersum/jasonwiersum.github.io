@@ -320,8 +320,16 @@
 
    At the far end, away from the back button. They do different things and one
    of them leaves the document; putting the width of the bar between them makes
-   that hard to do by accident. */
-.dialog__back--icon {
+   that hard to do by accident.
+
+   Qualified by `.cv__bar` for one reason: `.dialog__back` sets `padding: 0.5rem
+   0.9rem` and sits LATER in this file, so at equal specificity it won and this
+   reset never applied. Harmless while the control was in flow and free to be as
+   wide as it liked — and not harmless once the rule above made its width follow
+   its height: 38.8px of border box less 28.8px of padding it was not supposed
+   to have left 8.2px of room, and the 15px glyph was squashed into it at 8×15.
+   The extra class beats the shorthand wherever the two sit. */
+.cv__bar .dialog__back--icon {
   position: absolute;
   inset-block: 0;
   inset-inline-end: 0;
