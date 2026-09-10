@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react'
 import { SITE } from '../../config/site'
 import { DOC_GROUPS } from '../../data/documents'
 import { useLanguage } from '../../hooks/useLanguage'
-import { motionBudget } from '../../hooks/usePrefersReducedMotion'
 import { useReveal } from '../../hooks/useReveal'
 import { useRevealed } from '../../hooks/useRevealed'
 import { CvDialog } from './CvDialog'
@@ -145,10 +144,10 @@ function Portrait({ alt }: { alt: string }) {
   )
 }
 
-/** How long `useReveal` takes over one entrance, in ms. Its own default, and
- *  the wait the prose serves so the heading is finished and not merely started
- *  before the first paragraph moves. */
-const REVEAL_MS = 900
+/** How long `useReveal` takes over one entrance, in seconds — its own default.
+ *  The prose waits exactly this before starting, so the heading above it has
+ *  finished rather than merely begun. See `data-reveal-after` in that hook. */
+const REVEAL_S = 0.9
 
 /**
  * How long the last timeline card takes to finish writing itself once the line
@@ -171,58 +170,6 @@ export function About() {
   const root = useRef<HTMLDivElement>(null)
   useReveal(root)
 
-  /**
-   * The heading arrives, and only then the paragraphs under it.
-   *
-   * Document order alone very nearly does this already — the heading sits above
-   * the prose, so it crosses the entrance line first and `useReveal` staggers a
-   * group in the order it finds it. What it does not give is a guarantee: the
-   * two cross within about a tenth of a second of each other at reading speed,
-   * against the 900ms an entrance takes, so the paragraphs were fading up while
-   * the heading was still mostly transparent and the pair read as arriving
-   * together.
-   *
-   * So the prose waits on the heading twice over: for it to cross the same line
-   * (`useRevealed` reports exactly that, using `useReveal`'s own band so there
-   * is one answer), and then for its entrance to finish. The gate is read on
-   * the way in and ignored on the way out, which is what `useRevealed` is for —
-   * scrolling back up, the prose leaves on its own account rather than waiting
-   * for the heading again.
-   */
-  const [titleBox, titleShown] = useRevealed()
-  const [afterTitle, setAfterTitle] = useState(false)
-  useEffect(() => {
-    if (!titleShown) {
-      setAfterTitle(false)
-      return
-    }
-    // Capped with everything else under `prefers-reduced-motion`: the order is
-    // the point and the waiting is not, so the wait shortens with the entrance
-    // it is waiting for rather than outliving it.
-    const wait = motionBudget().duration(REVEAL_MS / 1000) * 1000
-    const timer = window.setTimeout(() => setAfterTitle(true), wait)
-    return () => window.clearTimeout(timer)
-  }, [titleShown])
-  const [proseBox, proseShown] = useRevealed(afterTitle)
-
-  /**
-   * Once the paragraphs are in, they stay in.
-   *
-   * `useRevealed` takes them back out when they leave the band, which every
-   * other block on the page wants — a heading or a panel replays its entrance
-   * and that reads as the page being alive. Body copy is not that. Scrolling
-   * back up to re-read a sentence meant scrolling almost to the heading before
-   * the paragraphs would come back, because the entrance line they answer to
-   * is near the top of the screen and they had genuinely been unshown.
-   *
-   * So this latches. It is deliberately one-way and never resets: the reader
-   * has already seen these words, and there is nothing to reveal to them a
-   * second time.
-   */
-  const [proseStays, setProseStays] = useState(false)
-  useEffect(() => {
-    if (proseShown) setProseStays(true)
-  }, [proseShown])
   /** Whether the line has reached the point it ends on. Everything below the
    *  line waits for it, so neither "read the whole history" nor the figures
    *  summing it up can arrive before the history has finished drawing.
@@ -261,18 +208,21 @@ export function About() {
       <div className="container">
         <div className="about__grid">
           <div className="about__main">
-            <h2 className="section__title" ref={titleBox} data-reveal>
+            <h2 className="section__title" data-reveal>
               {t.about.title}
             </h2>
 
-            {/* `data-shown` on the block rather than `data-reveal` on each
-                paragraph: the paragraphs still arrive one after another, but
-                the whole run is held until the heading above them has finished.
-                A `data-reveal` cannot be held — `useReveal` animates whatever
-                it finds, on its own schedule. */}
-            <div className="about__prose" ref={proseBox} data-shown={proseStays || undefined}>
+            {/* Ordinary `data-reveal`, exactly as a project card — so these
+                come and go the same way one does, in both directions, and leave
+                back the way they came. `data-reveal-after` is the one addition:
+                REVEAL_S of wait, which is `useReveal`'s own entrance length, so
+                the heading above is finished and not merely started before the
+                first paragraph moves. */}
+            <div className="about__prose">
               {t.about.paragraphs.map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
+                <p key={index} data-reveal data-reveal-after={REVEAL_S}>
+                  {paragraph}
+                </p>
               ))}
             </div>
 
