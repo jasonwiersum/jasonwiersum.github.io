@@ -72,6 +72,70 @@ const WEIGHT_X = manifest.gazeWeightX
  *  build-character.py that measured it. */
 const NEARNESS = manifest.gazeNearness
 
+/**
+ * The clip is a ring, not a strip.
+ *
+ * It opens on frame 0 looking straight ahead, sweeps the whole compass once —
+ * up-left, up, up-right, right, down-right, down, down-left, left — and comes
+ * back to straight ahead for its last seven frames. So its two ends are the
+ * same pose, and joining them costs one step of 4.41 levels where the average
+ * step is 1.76 and the largest inside the clip is already 3.30: a settle of the
+ * head, measured, not a cut.
+ *
+ * What it buys is the whole point. On a strip the walk from one direction to
+ * another can only go the way the clip was filmed, so up-left to left meant
+ * crossing 153 frames — the entire compass — to reach a pose two seconds of
+ * real head movement away. On a ring the same walk goes backwards through
+ * straight-ahead in 87, and nothing is ever further than half the clip.
+ */
+const HALF = COUNT / 2
+
+/** How far `to` is from `from` the short way round, signed. */
+function ringDelta(from: number, to: number) {
+  let d = to - from
+  if (d > HALF) d -= COUNT
+  else if (d < -HALF) d += COUNT
+  return d
+}
+
+/** Where a frame sits on the sheet, as the transform that brings it into the
+ *  box. The render loop and the first paint have to agree on this, so they
+ *  read it from the same place. */
+function frameTransform(frame: number) {
+  const x = (frame % manifest.columns) / manifest.columns
+  const y = Math.floor(frame / manifest.columns) / manifest.rows
+  return `translate3d(${-x * 100}%, ${-y * 100}%, 0)`
+}
+
+/**
+ * Where the walk begins: the frame looking up and to the left.
+ *
+ * It used to begin on the resting frame, which is frame 233 — seven frames from
+ * the end of the recording. On a strip that is the worst place to stand: the
+ * whole compass lies in one direction, so the first thing the character did was
+ * set off across all of it. Up-left is where the clip's sweep starts, and it is
+ * also where the cursor tends to be when the page opens, above and to the left
+ * of a character that sits right of centre.
+ *
+ * Read from the gaze table rather than written down, so it follows the
+ * choreography if the recording is ever re-cut: it is simply the frame that
+ * looks hardest up and left.
+ */
+const START = (() => {
+  let best = 0
+  let bestCost = Infinity
+  for (let i = 0; i < COUNT; i += 1) {
+    const dx = GAZE[i * 2] + 1
+    const dy = GAZE[i * 2 + 1] - 1
+    const cost = dx * dx + dy * dy
+    if (cost < bestCost) {
+      bestCost = cost
+      best = i
+    }
+  }
+  return best
+})()
+
 /** Whether this device has a pointer that can be followed at all. Read once:
  *  a machine does not grow a mouse mid-session, and if one is plugged in the
  *  page it changes is the next one. */
@@ -108,7 +172,7 @@ export function CharacterStage() {
   const sheet = useRef<HTMLImageElement>(null)
   /** Position in the clip. Continuous, so it can be eased; the frame shown is
    *  this rounded. */
-  const position = useRef(manifest.neutral)
+  const position = useRef(START)
   const shown = useRef(-1)
   const [ready, setReady] = useState(false)
   const [wavePlaying, setWavePlaying] = useState(false)
@@ -810,13 +874,20 @@ export function CharacterStage() {
       // ship, the head now arrives in 0.92s rather than 1.11s on average and
       // 2.05s rather than 2.13s at worst, AND lands closer to the direction
       // asked for (0.332 against 0.356). The weight is in the manifest.
+      //
+      // Both the nearness term here and the walk below measure the distance the
+      // short way round the ring, which is the only place the two ends of the
+      // recording are joined — see ringDelta. A frame seven from the end and a
+      // frame at the start are seven apart, not 233, and the aim is free to
+      // prefer the one behind the character over the one the clip happens to
+      // reach later.
       const here = position.current
       let aim = 0
       let bestCost = Infinity
       for (let i = 0; i < COUNT; i += 1) {
         const dx = GAZE[i * 2] - gaze.x
         const dy = GAZE[i * 2 + 1] - gaze.y
-        const far = (i - here) / COUNT
+        const far = ringDelta(here, i) / COUNT
         const cost = WEIGHT_X * dx * dx + dy * dy + NEARNESS * far * far
         if (cost < bestCost) {
           bestCost = cost
@@ -828,18 +899,17 @@ export function CharacterStage() {
       // The cap is what guarantees the walk passes through the frames in
       // between instead of skipping over them.
       const limit = MAX_TRAVEL * delta
-      let step = (aim - here) * (1 - Math.exp(-FOLLOW * delta))
+      let step = ringDelta(here, aim) * (1 - Math.exp(-FOLLOW * delta))
       if (step > limit) step = limit
       else if (step < -limit) step = -limit
-      position.current = here + step
+      // Wrapped, because the step can now carry the walk off either end.
+      position.current = (((here + step) % COUNT) + COUNT) % COUNT
 
-      const frame = Math.round(position.current)
+      const frame = Math.round(position.current) % COUNT
       if (frame === shown.current) return
       shown.current = frame
 
-      const x = (frame % manifest.columns) / manifest.columns
-      const y = Math.floor(frame / manifest.columns) / manifest.rows
-      img.style.transform = `translate3d(${-x * 100}%, ${-y * 100}%, 0)`
+      img.style.transform = frameTransform(frame)
     },
     [],
   )
@@ -860,7 +930,6 @@ export function CharacterStage() {
   // The still stays underneath as the layer that holds the size and marks the
   // character ready, and it is what shows if the video is missing.
   const src = tracks ? SHEET : STILL
-  const neutral = manifest.neutral
   const wave = !tracks && !waveBroken
   // The wave is a 16:9 shot. The head sits at x=630 of 1280 and the raised hand
   // reaches out to x=146, so the furthest the subject gets from the head is
@@ -924,11 +993,10 @@ export function CharacterStage() {
         style={
           tracks
             ? {
-                // Start on the resting frame, so the first paint is not the
-                // top-left corner of the sheet.
-                transform: `translate3d(${
-                  -((neutral % manifest.columns) / manifest.columns) * 100
-                }%, ${-(Math.floor(neutral / manifest.columns) / manifest.rows) * 100}%, 0)`,
+                // The frame the walk starts from, so the first paint and the
+                // first step are the same picture — and so that what the sheet
+                // shows is a character, not the top-left corner of a grid.
+                transform: frameTransform(START),
               }
             : undefined
         }

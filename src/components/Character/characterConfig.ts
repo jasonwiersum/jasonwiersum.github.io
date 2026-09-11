@@ -53,17 +53,15 @@ export const FOLLOW = 6
 /**
  * Ceiling on how fast the clip is allowed to run, in frames per second.
  *
- * The sheet holds one unbroken stretch of the recording at its own frame rate,
- * so 24 is life speed. Above about 60 the walk starts skipping frames on a
- * 60 Hz screen and the point of all this is lost; well below 24 it feels
- * underwater.
+ * The sheet holds the recording at its own frame rate, so 24 is life speed.
+ * Above about 60 the walk starts skipping frames on a 60 Hz screen and the
+ * point of all this is lost; well below 24 it feels underwater.
  *
- * 60, the most that still shows every frame on a 60 Hz screen. The sheet holds
- * 110 frames rather than 72 now, so crossing the whole of it is a longer walk;
- * at the old 48 the far corners took about 1.8s to reach, which reads as the
- * character ignoring you rather than answering slowly. This is the ceiling, so
- * anything further has to come from the sheet being shorter, not the walk
- * being faster.
+ * 60, then: the most that still shows every frame on a 60 Hz screen. That is a
+ * ceiling and not a dial, so anything faster has to come from the walk being
+ * shorter rather than quicker — which is what joining the clip's two ends into
+ * a ring does (see CharacterStage). Nothing is further than half of the 240
+ * frames now, so the longest walk there is takes two seconds rather than four.
  */
 export const MAX_TRAVEL = 60
 
