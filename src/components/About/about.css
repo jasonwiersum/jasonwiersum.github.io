@@ -64,7 +64,33 @@
   box-shadow: var(--shadow-sm);
 }
 
+/*
+ * The photograph is made awkward to take, which is as far as a browser goes.
+ *
+ * Three doors, all of them shut here: the context menu's "Save image as"
+ * (About refuses the menu on the figure), dragging the picture out to a
+ * desktop (`draggable={false}` and `-webkit-user-drag`), and a long press on a
+ * phone, which opens the same offer as a sheet (`-webkit-touch-callout`).
+ *
+ * `pointer-events: none` is the one that does the most work, and it is not
+ * about clicks — the figure above still gets every one of them. It moves what
+ * the browser hit-tests under the cursor from the <img> to the <figure>, and a
+ * context menu opened over something that is not an image has no image
+ * commands on it to begin with. So the menu is refused twice over.
+ *
+ * What none of it does is protect the file. The photograph is a URL the page
+ * has already fetched: it is in the network tab, in the page source, in the
+ * browser's own cache, and one screenshot away regardless. This raises the
+ * effort from a right-click to a deliberate act — nothing more. The only real
+ * answers are a visible watermark or publishing a copy small enough not to be
+ * worth taking.
+ */
 .about__portrait img {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
   display: block;
   width: 100%;
   height: 100%;
