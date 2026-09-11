@@ -51,6 +51,40 @@ export const MAX_GAZE = 1
 export const FOLLOW = 6
 
 /**
+ * Where the clip is cut so its two ends can be joined — the seam of the ring.
+ *
+ * The recording opens looking straight ahead and ends looking straight ahead,
+ * which is what lets the walk treat it as a loop rather than a strip (see
+ * CharacterStage). But "the same pose" is not the same picture: between the
+ * last frame and the first, the head sits a little differently, and joining
+ * them at 239 → 0 made a step 3.6 times the size of an ordinary one — and 1.75
+ * times the largest step the recording contains anywhere. Measured on the
+ * frames themselves, weighted by how much each pixel moves across the clip, so
+ * the jumper that never moves does not dilute the head that does.
+ *
+ * These two are the pair that joins most quietly, out of every pair of ends
+ * that still leaves a frame looking straight ahead: 11.68 against an average
+ * step of 6.26 and a largest step of 12.80. Restricted to the head, where the
+ * eye actually goes, it comes to 1.83 against an average of 2.59 — the join is
+ * quieter than an ordinary step of the clip.
+ *
+ * It costs 33 frames: 20 off the front, 13 off the back, all of them within a
+ * whisker of straight ahead. Every one of the nine directions is between them,
+ * and the ring is 207 frames rather than 240, so the longest walk is shorter
+ * too.
+ *
+ * To find them again after a re-cut: take every pair (last, first) near the
+ * ends, composite each frame on its own alpha, and score the pair by the mean
+ * absolute difference weighted by the per-pixel variance across all frames.
+ */
+export const CLIP = {
+  /** First frame of the ring. */
+  first: 20,
+  /** Last frame, which joins back to the first. */
+  last: 226,
+}
+
+/**
  * Ceiling on how fast the clip is allowed to run, in frames per second.
  *
  * The sheet holds the recording at its own frame rate, so 24 is life speed.
