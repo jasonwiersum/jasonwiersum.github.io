@@ -86,6 +86,91 @@
   }
 }
 
+/**
+ * What the portrait says when you click it.
+ *
+ * Fixed and driven by the `translate` property alone, which About writes on
+ * every pointer move: fixed means the cursor's own coordinates need no
+ * conversion and a scroll under a still cursor leaves it in place, and keeping
+ * the position in `translate` leaves `transform` free for the flip and `scale`
+ * free for the entrance, so the three never overwrite one another.
+ *
+ * The margin is the gap from the cursor. Logical, so the flipped side answers
+ * with the same gap on the other edge.
+ */
+.about__bubble {
+  position: fixed;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  /* Above the page, which sits at `--z-content` — measured, a lower one put
+     the bubble behind the very photo it belongs to. Level with the floating
+     furniture rather than above it, and last in the body, so it wins on order
+     without claiming to outrank a dialog. */
+  z-index: var(--z-island);
+  margin-block-start: 0.9rem;
+  margin-inline-start: 1rem;
+  padding: 0.42rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--background-elevated);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+  /* It must never take the hover it depends on away from the photo. */
+  pointer-events: none;
+  opacity: 0;
+  scale: 0.94;
+  transform-origin: 0.9rem 0;
+  transition:
+    opacity 200ms var(--ease-out),
+    scale 200ms var(--ease-out);
+}
+
+.about__bubble[data-saying] {
+  opacity: 1;
+  scale: 1;
+}
+
+/* Drawn to the left of the cursor instead, near the right-hand edge. The
+   negative margin is what puts the gap back: the box is pulled a whole width
+   to the left, so a positive one would close it. */
+.about__bubble[data-flip] {
+  margin-inline-start: -1rem;
+  transform: translateX(-100%);
+  transform-origin: calc(100% - 0.9rem) 0;
+}
+
+/* The tail, pointing back at the cursor: a square with two of its borders
+   drawn, turned 45 degrees so the drawn corner faces out. */
+.about__bubble::before {
+  content: '';
+  position: absolute;
+  inset-block-start: -0.3rem;
+  inset-inline-start: 0.62rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-block-start: 1px solid var(--border);
+  border-inline-start: 1px solid var(--border);
+  border-start-start-radius: 2px;
+  background: var(--background-elevated);
+  rotate: 45deg;
+}
+
+.about__bubble[data-flip]::before {
+  inset-inline-start: auto;
+  inset-inline-end: 0.62rem;
+}
+
+/* The pop is the only part that is motion; the fade is a cross-fade and stays,
+   the same rule the rest of the page follows. */
+@media (prefers-reduced-motion: reduce) {
+  .about__bubble {
+    scale: 1;
+    transition: opacity 200ms var(--ease-out);
+  }
+}
+
 .about__facts-block {
   margin-block-start: clamp(2rem, 5vw, 4rem);
 

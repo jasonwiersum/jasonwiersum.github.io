@@ -1,5 +1,6 @@
 import { BookOpen, Download, Eye } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { SITE } from '../../config/site'
 import { DOC_GROUPS } from '../../data/documents'
 import { useLanguage } from '../../hooks/useLanguage'
@@ -137,11 +138,50 @@ function Cv({ ready }: { ready: boolean }) {
  * file degrades quietly instead of breaking the layout.
  */
 function Portrait({ alt }: { alt: string }) {
+  const { t } = useLanguage()
   const [failed, setFailed] = useState(false)
+  /** Whether the bubble is out. A click puts it there, the pointer leaving the
+   *  photo takes it away — so it costs a click each time, and hovering past the
+   *  picture afterwards stays quiet. */
+  const [saying, setSaying] = useState(false)
+  const bubble = useRef<HTMLSpanElement>(null)
+
+  /**
+   * Put the bubble where the cursor is.
+   *
+   * Straight onto the node, not through state: a pointer crossing the photo
+   * fires this dozens of times a second, and re-rendering the section for a
+   * pair of numbers nothing else reads is the same mistake the character's
+   * gaze avoids by keeping its own position in a ref.
+   *
+   * The flip is for the right-hand edge. The portrait is the right column on a
+   * wide screen, so a bubble always drawn to the right of the cursor would hang
+   * off the window; past that margin it is drawn to the left instead, and the
+   * tail moves with it.
+   */
+  const follow = (event: { clientX: number; clientY: number }) => {
+    const node = bubble.current
+    if (!node) return
+    node.toggleAttribute('data-flip', event.clientX + 200 > window.innerWidth)
+    node.style.translate = `${event.clientX}px ${event.clientY}px`
+  }
+
   if (failed) return null
 
   return (
-    <figure className="about__portrait" data-reveal>
+    <figure
+      className="about__portrait"
+      data-reveal
+      onPointerDown={(event) => {
+        // A tap is not a hover: on a touch screen nothing would ever take the
+        // bubble away again, so the gesture is left to pointers that can leave.
+        if (event.pointerType === 'touch') return
+        follow(event)
+        setSaying(true)
+      }}
+      onPointerMove={saying ? follow : undefined}
+      onPointerLeave={() => setSaying(false)}
+    >
       <img
         src={SITE.portrait}
         alt={alt}
@@ -149,6 +189,28 @@ function Portrait({ alt }: { alt: string }) {
         decoding="async"
         onError={() => setFailed(true)}
       />
+      {/* On the body, not in the figure, and for two reasons that both bite.
+          The section carries a scroll-scrubbed transform, which makes it the
+          containing block for anything fixed inside it — measured, a click at
+          x=1059 put the bubble at x=1939 — and the figure clips its overflow to
+          hold the portrait's push-in, which would cut the bubble in half.
+
+          Always mounted, so that it can fade out as well as in, and so the
+          click has something to position before it is seen. Hidden from
+          assistive technology on purpose: it is a joke about a picture whose
+          alt text already says who this is, and it is reachable only with a
+          pointer. */}
+      {createPortal(
+        <span
+          className="about__bubble"
+          ref={bubble}
+          data-saying={saying || undefined}
+          aria-hidden="true"
+        >
+          {t.about.portraitBubble}
+        </span>,
+        document.body,
+      )}
     </figure>
   )
 }
