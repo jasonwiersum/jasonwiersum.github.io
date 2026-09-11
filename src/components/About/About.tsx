@@ -176,9 +176,16 @@ function Portrait({ alt }: { alt: string }) {
         // A tap is not a hover: on a touch screen nothing would ever take the
         // bubble away again, so the gesture is left to pointers that can leave.
         if (event.pointerType === 'touch') return
+        // The left button only. A right-click is on its way to a menu that is
+        // about to be refused, and answering it with the bubble would read as
+        // the refusal.
+        if (event.button !== 0) return
         follow(event)
         setSaying(true)
       }}
+      // No context menu on the photograph. See the note in about.css for what
+      // this does and does not achieve.
+      onContextMenu={(event) => event.preventDefault()}
       onPointerMove={saying ? follow : undefined}
       onPointerLeave={() => setSaying(false)}
     >
@@ -187,6 +194,9 @@ function Portrait({ alt }: { alt: string }) {
         alt={alt}
         loading="lazy"
         decoding="async"
+        // Dragging an image to the desktop saves it, which is the one download
+        // route that needs no menu at all.
+        draggable={false}
         onError={() => setFailed(true)}
       />
       {/* On the body, not in the figure, and for two reasons that both bite.
