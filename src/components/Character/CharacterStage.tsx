@@ -3,6 +3,7 @@ import { announceGreetingDone } from '../../hooks/useGreeting'
 import { useLanguage } from '../../hooks/useLanguage'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import {
+  CLIP,
   CLIP_FADE,
   FOLLOW,
   IDLE_REST,
@@ -65,7 +66,6 @@ const LOOP = [IDLE, COFFEE, YAWN]
 /** Gaze of every frame, flattened — read once per animation frame, so the pair
  *  of numbers should be adjacent in memory rather than behind two lookups. */
 const GAZE = Float32Array.from(manifest.gaze.flat())
-const COUNT = manifest.count
 const WEIGHT_X = manifest.gazeWeightX
 /** How much the aim prefers a frame it can reach soon over one that looks a
  *  shade more like where the cursor is. See the render loop, and the note in
@@ -75,27 +75,37 @@ const NEARNESS = manifest.gazeNearness
 /**
  * The clip is a ring, not a strip.
  *
- * It opens on frame 0 looking straight ahead, sweeps the whole compass once —
- * up-left, up, up-right, right, down-right, down, down-left, left — and comes
- * back to straight ahead for its last seven frames. So its two ends are the
- * same pose, and joining them costs one step of 4.41 levels where the average
- * step is 1.76 and the largest inside the clip is already 3.30: a settle of the
- * head, measured, not a cut.
+ * It opens looking straight ahead, sweeps the whole compass once — up-left, up,
+ * up-right, right, down-right, down, down-left, left — and comes back to
+ * straight ahead. So its two ends are the same pose, and the walk can go either
+ * way round rather than only the way the clip was filmed. That is the whole
+ * point: up-left to left used to mean crossing 153 frames, the entire compass,
+ * to reach a pose a second of real head movement away.
  *
- * What it buys is the whole point. On a strip the walk from one direction to
- * another can only go the way the clip was filmed, so up-left to left meant
- * crossing 153 frames — the entire compass — to reach a pose two seconds of
- * real head movement away. On a ring the same walk goes backwards through
- * straight-ahead in 87, and nothing is ever further than half the clip.
+ * Where the ends are joined is CLIP, in characterConfig, and it is not at the
+ * first and last frames. The same pose is not the same picture — the head sits
+ * a little differently in each — and the frames the recording happens to start
+ * and stop on made a visible jump. The pair used instead joins more quietly
+ * than an ordinary step of the clip; the measurement is on CLIP.
+ *
+ * So the ring is CLIP.first…CLIP.last, SPAN frames long, and everything below
+ * counts within it.
  */
-const HALF = COUNT / 2
+const FIRST = CLIP.first
+const SPAN = CLIP.last - CLIP.first + 1
+const HALF = SPAN / 2
 
 /** How far `to` is from `from` the short way round, signed. */
 function ringDelta(from: number, to: number) {
   let d = to - from
-  if (d > HALF) d -= COUNT
-  else if (d < -HALF) d += COUNT
+  if (d > HALF) d -= SPAN
+  else if (d < -HALF) d += SPAN
   return d
+}
+
+/** Any position, brought back inside the ring. */
+function wrap(frame: number) {
+  return FIRST + (((frame - FIRST) % SPAN) + SPAN) % SPAN
 }
 
 /** Where a frame sits on the sheet, as the transform that brings it into the
@@ -122,9 +132,9 @@ function frameTransform(frame: number) {
  * looks hardest up and left.
  */
 const START = (() => {
-  let best = 0
+  let best = FIRST
   let bestCost = Infinity
-  for (let i = 0; i < COUNT; i += 1) {
+  for (let i = FIRST; i <= CLIP.last; i += 1) {
     const dx = GAZE[i * 2] + 1
     const dy = GAZE[i * 2 + 1] - 1
     const cost = dx * dx + dy * dy
@@ -884,10 +894,10 @@ export function CharacterStage() {
       const here = position.current
       let aim = 0
       let bestCost = Infinity
-      for (let i = 0; i < COUNT; i += 1) {
+      for (let i = FIRST; i <= CLIP.last; i += 1) {
         const dx = GAZE[i * 2] - gaze.x
         const dy = GAZE[i * 2 + 1] - gaze.y
-        const far = ringDelta(here, i) / COUNT
+        const far = ringDelta(here, i) / SPAN
         const cost = WEIGHT_X * dx * dx + dy * dy + NEARNESS * far * far
         if (cost < bestCost) {
           bestCost = cost
@@ -903,9 +913,9 @@ export function CharacterStage() {
       if (step > limit) step = limit
       else if (step < -limit) step = -limit
       // Wrapped, because the step can now carry the walk off either end.
-      position.current = (((here + step) % COUNT) + COUNT) % COUNT
+      position.current = wrap(here + step)
 
-      const frame = Math.round(position.current) % COUNT
+      const frame = wrap(Math.round(position.current))
       if (frame === shown.current) return
       shown.current = frame
 
