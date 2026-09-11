@@ -109,11 +109,17 @@
   z-index: var(--z-island);
   margin-block-start: 0.9rem;
   margin-inline-start: 1rem;
+  /* Grows out of the corner nearest the cursor. */
+  transform-origin: 0 0;
   padding: 0.42rem 0.75rem;
-  border: 1px solid var(--border);
   border-radius: var(--radius-pill);
-  background: var(--background-elevated);
-  color: var(--foreground);
+  /* The page's own blue, and the colour that is legible on it. Not a literal
+     white: the accent is #0038ff in light, where white gives 6.98:1, but a
+     lighter #5b84ff in dark, where white falls to 3.39:1 — under AA for text
+     this size. `--accent-contrast` is white in light and near-black in dark,
+     which is 5.76:1 there. Same job, right answer in both. */
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-size: var(--text-xs);
   white-space: nowrap;
   box-shadow: var(--shadow-md);
@@ -121,7 +127,6 @@
   pointer-events: none;
   opacity: 0;
   scale: 0.94;
-  transform-origin: 0.9rem 0;
   transition:
     opacity 200ms var(--ease-out),
     scale 200ms var(--ease-out);
@@ -138,28 +143,7 @@
 .about__bubble[data-flip] {
   margin-inline-start: -1rem;
   transform: translateX(-100%);
-  transform-origin: calc(100% - 0.9rem) 0;
-}
-
-/* The tail, pointing back at the cursor: a square with two of its borders
-   drawn, turned 45 degrees so the drawn corner faces out. */
-.about__bubble::before {
-  content: '';
-  position: absolute;
-  inset-block-start: -0.3rem;
-  inset-inline-start: 0.62rem;
-  width: 0.55rem;
-  height: 0.55rem;
-  border-block-start: 1px solid var(--border);
-  border-inline-start: 1px solid var(--border);
-  border-start-start-radius: 2px;
-  background: var(--background-elevated);
-  rotate: 45deg;
-}
-
-.about__bubble[data-flip]::before {
-  inset-inline-start: auto;
-  inset-inline-end: 0.62rem;
+  transform-origin: 100% 0;
 }
 
 /* The pop is the only part that is motion; the fade is a cross-fade and stays,

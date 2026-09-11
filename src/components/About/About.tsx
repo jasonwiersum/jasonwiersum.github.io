@@ -215,10 +215,21 @@ function Portrait({ alt }: { alt: string }) {
   )
 }
 
-/** How long `useReveal` takes over one entrance, in seconds — its own default.
- *  The prose waits exactly this before starting, so the heading above it has
- *  finished rather than merely begun. See `data-reveal-after` in that hook. */
-const REVEAL_S = 0.9
+/**
+ * How long the prose waits before its entrance, in seconds.
+ *
+ * It used to wait 0.9 — a whole entrance — so that the heading above it had
+ * FINISHED rather than merely begun. That is more order than the section
+ * needed and it was felt as a delay: measured from crossing the line to being
+ * fully there, a paragraph took 2.2s against the heading's 1.1s and the
+ * closing line's 1.1s, and nearly all of the difference was dead waiting.
+ *
+ * 0.2 puts a paragraph at 0.84s from the line to the first sign of it, which
+ * is the closing line's own 0.88s — the line the section reveals at a speed
+ * that reads right. The heading still leads it by about a third of a second,
+ * which is the part that has to stay true.
+ */
+const REVEAL_S = 0.2
 
 /**
  * How long the last timeline card takes to finish writing itself once the line
