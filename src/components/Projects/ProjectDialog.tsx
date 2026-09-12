@@ -2,6 +2,8 @@ import { ArrowLeft, ArrowUpRight, MapPin } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Project } from '../../data/projects'
+import { repoStatusFor } from '../../data/repoStatuses'
+import { RepoStatusPanel } from './RepoStatusPanel'
 import { useDialogTransition } from '../../hooks/useDialogTransition'
 import { useLanguage } from '../../hooks/useLanguage'
 
@@ -18,6 +20,9 @@ export function ProjectDialog({ project, origin, onClose }: Props) {
   const scrim = useRef<HTMLDivElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
   const detail = project.detail
+  // `null` whenever the build could not reach GitHub, so every branch below
+  // has to read without it.
+  const status = repoStatusFor(project.repo)
 
   const dismiss = useDialogTransition({
     panel,
@@ -73,7 +78,9 @@ export function ProjectDialog({ project, origin, onClose }: Props) {
               </div>
 
               <section className="dialog__section">
-                <h3 className="dialog__section-title">{t.projects.highlights}</h3>
+                <h3 className="dialog__section-title">
+                  {detail.highlightsAs === 'scope' ? t.projects.scope : t.projects.highlights}
+                </h3>
                 <ul className="dialog__highlights">
                   {detail.highlights[language].map((item) => (
                     <li key={item}>{item}</li>
@@ -84,6 +91,8 @@ export function ProjectDialog({ project, origin, onClose }: Props) {
               <Shots images={detail.images ?? []} title={project.title[language]} />
             </>
           ) : null}
+
+          {status ? <RepoStatusPanel status={status} /> : null}
 
           <div className="dialog__meta">
             <section className="dialog__section">
@@ -114,7 +123,7 @@ export function ProjectDialog({ project, origin, onClose }: Props) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {t.projects.visitSite}
+              {project.repo ? t.projects.viewRepo : t.projects.visitSite}
               <ArrowUpRight size={15} strokeWidth={2} aria-hidden="true" />
             </a>
           ) : null}

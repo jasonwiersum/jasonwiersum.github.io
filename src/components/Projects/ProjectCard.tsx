@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import type { Project } from '../../data/projects'
+import { relativeTime, absoluteDate } from '../../data/repoStatus'
+import { repoStatusFor } from '../../data/repoStatuses'
 import { useLanguage } from '../../hooks/useLanguage'
 import { prefersReducedMotionNow } from '../../hooks/usePrefersReducedMotion'
 
@@ -10,7 +12,7 @@ interface Props {
 }
 
 export function ProjectCard({ project, index, onOpen }: Props) {
-  const { language } = useLanguage()
+  const { t, language } = useLanguage()
   const cardRef = useRef<HTMLElement>(null)
   const [previewBroken, setPreviewBroken] = useState(false)
   const [logoBroken, setLogoBroken] = useState(false)
@@ -22,6 +24,11 @@ export function ProjectCard({ project, index, onOpen }: Props) {
   // A logo that will not load falls back to the client's name, so a missing or
   // renamed file never leaves a broken image on the card.
   const logo = logoBroken ? null : (project.logo ?? null)
+  // Present only for a project with a repository behind it, and only when the
+  // build managed to read it. It is the one piece of the card that is not the
+  // same on every deploy — which is the point: a project still being worked on
+  // should be able to say so without anyone editing this file.
+  const status = repoStatusFor(project.repo)
 
   // Pointer position is written straight to CSS custom properties: no React
   // state, so moving the cursor never re-renders anything.
@@ -55,6 +62,17 @@ export function ProjectCard({ project, index, onOpen }: Props) {
             {String(index + 1).padStart(2, '0')}
           </span>
         )}
+
+        {status ? (
+          <span
+            className="project__pulse"
+            title={`${t.projects.activity}: ${absoluteDate(status.pushedAt, language)}`}
+          >
+            <span className="project__pulse-dot" aria-hidden="true" />
+            <span className="visually-hidden">{t.projects.activity}: </span>
+            {relativeTime(status.pushedAt, language)}
+          </span>
+        ) : null}
 
         {preview ? (
           <img
