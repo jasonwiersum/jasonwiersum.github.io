@@ -64,6 +64,31 @@
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png" />
 
+    <!--
+      The character's sprite sheet, asked for while the HTML is still being
+      parsed rather than when React mounts. It is 3.6 MB and the hero cannot
+      draw anything until it has arrived and been decoded, so starting it when
+      the bundle has mounted instead is over two seconds of empty hero:
+      measured, this starts at 21ms and the mount at 2323ms.
+
+      It is an <img> on the other end, not a `fetch` — a preload is only handed
+      to a request whose destination matches it, and the note on the component
+      has what happened when it was not.
+
+      `media` is what keeps it honest: a touch device never follows a cursor
+      and never fetches the sheet, and a preload without that condition would
+      put 3.6 MB on every phone that opens the page. Low priority so it queues
+      behind the stylesheet and the bundle it must not delay.
+    -->
+    <link
+      rel="preload"
+      as="image"
+      href="%BASE_URL%character/frames.webp"
+      type="image/webp"
+      media="(pointer: fine)"
+      fetchpriority="low"
+    />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

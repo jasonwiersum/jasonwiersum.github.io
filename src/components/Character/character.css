@@ -1,5 +1,7 @@
-/* A window one pose wide, with the whole sheet inside it. Only the sheet's
-   transform changes, so choosing a pose costs a composite and nothing else. */
+/* The character's box. On a pointer device it holds a canvas of exactly this
+   size, one frame of the sheet drawn into it per pose — see `paint` in
+   CharacterStage for why it is a canvas and not the sheet itself slid behind a
+   window, which is what it used to be. */
 .character {
   position: relative;
   overflow: hidden;
@@ -206,16 +208,14 @@
   object-fit: contain;
 }
 
+/* The canvas on a pointer device, the still on a touch one. Both fill the box
+   exactly; the canvas is sized in device pixels from CharacterStage. */
 .character__sheet {
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   transition: opacity 260ms var(--ease-out);
-  width: calc(100% * var(--character-cols));
-  height: calc(100% * var(--character-rows));
-  max-width: none;
-  transform: translate3d(0, 0, 0);
-  will-change: transform;
   user-select: none;
   pointer-events: none;
 }

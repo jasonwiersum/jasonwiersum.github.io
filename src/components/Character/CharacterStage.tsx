@@ -108,13 +108,12 @@ function wrap(frame: number) {
   return FIRST + (((frame - FIRST) % SPAN) + SPAN) % SPAN
 }
 
-/** Where a frame sits on the sheet, as the transform that brings it into the
- *  box. The render loop and the first paint have to agree on this, so they
- *  read it from the same place. */
-function frameTransform(frame: number) {
-  const x = (frame % manifest.columns) / manifest.columns
-  const y = Math.floor(frame / manifest.columns) / manifest.rows
-  return `translate3d(${-x * 100}%, ${-y * 100}%, 0)`
+/** Where a frame sits on the sheet, in the sheet's own pixels. */
+function frameSource(frame: number) {
+  return {
+    x: (frame % manifest.columns) * manifest.frameWidth,
+    y: Math.floor(frame / manifest.columns) * manifest.frameHeight,
+  }
 }
 
 /**
@@ -172,14 +171,21 @@ function hasFinePointer() {
  * blending. (The two video clips a touch device gets do dissolve into each
  * other; that is a different problem, and the note is on them.)
  *
- * The character itself never moves, scales or rotates; only the frame changes,
- * as a `translate3d` the compositor handles without repainting. React does not
- * re-render while the cursor moves.
+ * The frame is drawn into a canvas the size of the character, and that is not
+ * a detail — see the note on `paint`. React does not re-render while the
+ * cursor moves.
  */
 export function CharacterStage() {
   const { t } = useLanguage()
   const stage = useRef<HTMLDivElement>(null)
-  const sheet = useRef<HTMLImageElement>(null)
+  /** The canvas the frames are drawn into, the decoded sheet they are drawn
+   *  from, and the context and backing-store size that sit between them. All
+   *  refs: the render loop reads them every animation frame and must not be
+   *  rebuilt when one of them arrives. */
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const painter = useRef<CanvasRenderingContext2D | null>(null)
+  const bitmap = useRef<ImageBitmap | null>(null)
+  const surface = useRef({ w: 0, h: 0 })
   /** Position in the clip. Continuous, so it can be eased; the frame shown is
    *  this rounded. */
   const position = useRef(START)
@@ -825,6 +831,194 @@ export function CharacterStage() {
   const tracks = useMemo(hasFinePointer, [])
 
   /**
+   * Draw one frame of the sheet into the canvas.
+   *
+   * The sheet used to be an <img> fifteen frames wide and sixteen tall, slid
+   * behind a one-frame window by a `translate3d` — which reads as the cheapest
+   * thing on the page, and is the opposite. A 3D transform promotes the element
+   * to a compositor layer of its own, and that layer is the whole sheet: 7111 x
+   * 7494 CSS pixels, 53.3 megapixels, 213 MB of raster at 1x and four times
+   * that on a 2x screen. No browser keeps that resident.
+   *
+   * So it does not. Chrome tiles the layer, rasters only the tiles near the
+   * window and throws the rest away — and every pose change moves the window
+   * somewhere else on the sheet. Traced over the same 13-second sweep of the
+   * cursor, before this and after it: 2712 raster tasks and 1506ms of raster
+   * against 8 and 8ms; the sheet decoded again from the WebP 71 times against
+   * none; and a frame cc labelled `PictureLayerImpl::AppendQuads checkerboard`
+   * — its own name for drawing a region whose tile was not ready — against
+   * none. The sheet is transparent, so a checkerboard here is not a pattern.
+   * It is nothing. Filmed at 1x, one captured frame has no character in it at
+   * all and the next one has him back: that is the flash.
+   *
+   * A canvas the size of the character retires the whole mechanism. The layer
+   * is 474 x 468 rather than 7111 x 7494 — 0.22 megapixels, a 240th — and it is
+   * always the visible one, so there are no tiles to miss. The sheet is decoded
+   * once into an ImageBitmap this component owns and holds, so the decode cache
+   * has nothing to evict and nothing to re-decode. Each frame is one blit of
+   * one 416 x 411 rectangle.
+   *
+   * The bitmap is 164 MB of decoded pixels and that is not a new cost: measured
+   * as Chrome's total resident memory on a 2x screen after the same sweep, it
+   * comes in at or just under what the layer and the thrashing decode cache
+   * were already using.
+   *
+   * The picture itself is unchanged. Six poses, each settled and captured on
+   * both builds: 0.75 of 255 averaged over the box, all of it on edges, where
+   * one upscaling filter has been swapped for another. The canvas measures a
+   * shade sharper — 2.4% more edge energy at 1x, 3.5% at 2x.
+   *
+   * `clearRect` first because the frames are cut out: without it the previous
+   * head would show through the gap beside this one.
+   */
+  const paint = useCallback((frame: number) => {
+    const context = painter.current
+    const bmp = bitmap.current
+    if (!context || !bmp) return
+    const { w, h } = surface.current
+    const from = frameSource(frame)
+    context.clearRect(0, 0, w, h)
+    context.drawImage(
+      bmp,
+      from.x,
+      from.y,
+      manifest.frameWidth,
+      manifest.frameHeight,
+      0,
+      0,
+      w,
+      h,
+    )
+  }, [])
+
+  /**
+   * Keep the backing store on the device's pixel grid.
+   *
+   * A canvas has two sizes and they are not the same thing: the CSS box, which
+   * the stylesheet sets to fill the character, and the backing store, which is
+   * what is actually drawn and has to be in device pixels or the browser
+   * resamples the result a second time. The source frame is 416 wide against a
+   * box that is 474, so it is already being scaled up — doing it twice is the
+   * difference between soft and mushy.
+   *
+   * Setting `width` or `height` on a canvas wipes it and resets the context, so
+   * both are only touched when they actually change, and the frame is drawn
+   * again afterwards.
+   */
+  useEffect(() => {
+    if (!tracks) return
+    const node = canvas.current
+    const box = stage.current
+    if (!node || !box) return
+
+    const fit = () => {
+      const rect = box.getBoundingClientRect()
+      const ratio = window.devicePixelRatio || 1
+      const w = Math.max(1, Math.round(rect.width * ratio))
+      const h = Math.max(1, Math.round(rect.height * ratio))
+      if (w === node.width && h === node.height) return
+      node.width = w
+      node.height = h
+      surface.current = { w, h }
+      const context = node.getContext('2d')
+      if (context) {
+        // The blit is an upscale of a 416-wide frame, so the filter is the
+        // whole of how it looks. The default is bilinear; 'high' is what the
+        // browser uses for an <img>, which is the picture this replaces.
+        context.imageSmoothingEnabled = true
+        context.imageSmoothingQuality = 'high'
+        painter.current = context
+      }
+      paint(shown.current < 0 ? START : shown.current)
+    }
+
+    fit()
+    const observer = new ResizeObserver(fit)
+    observer.observe(box)
+
+    // A window dragged onto a second screen changes devicePixelRatio without
+    // changing the box, so the observer never fires and the canvas would stay
+    // at the old screen's resolution. The query has to name the ratio it is
+    // watching, so it can only report leaving that one — it is rearmed on the
+    // new ratio each time, or a 1x -> 2x -> 3x trip would only be caught once.
+    let ratioQuery: MediaQueryList | null = null
+    const onRatioChange = () => {
+      fit()
+      watchRatio()
+    }
+    function watchRatio() {
+      ratioQuery?.removeEventListener('change', onRatioChange)
+      ratioQuery = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`)
+      ratioQuery.addEventListener('change', onRatioChange)
+    }
+    watchRatio()
+
+    return () => {
+      observer.disconnect()
+      ratioQuery?.removeEventListener('change', onRatioChange)
+    }
+  }, [tracks, paint])
+
+  /**
+   * Load the sheet, once, into a bitmap this component owns.
+   *
+   * Owning it is the point: an ImageBitmap is decoded pixels held by the page,
+   * not an entry in a cache the browser trims whenever it feels the pressure —
+   * which, at 41 megapixels, was every few hundred milliseconds.
+   *
+   * An <img> rather than `fetch`, and that is not arbitrary. index.html asks
+   * for this file while it is still parsing the HTML, which is a good two
+   * seconds before React mounts — measured, the preload starts at 21ms and the
+   * mount at 2323ms — and a preload is only handed over to a request that
+   * matches it. `as="image"` matches an image element; a `fetch` of the same
+   * URL is a different destination, and it downloaded all 3.6 MB a second
+   * time. Two requests, on film, until this was an <img>.
+   *
+   * Waiting for `load` rather than calling `decode()` first is what keeps the
+   * decode single: nothing ever paints this element, so the only decode it
+   * gets is the one inside createImageBitmap.
+   *
+   * Nothing is shown until it arrives, and `ready` is what the fade waits on,
+   * so a sheet that never loads leaves the hero empty exactly as it did before.
+   */
+  useEffect(() => {
+    if (!tracks) return
+    let live = true
+    let owned: ImageBitmap | null = null
+    const img = new Image()
+    void (async () => {
+      try {
+        img.decoding = 'async'
+        img.src = SHEET
+        await new Promise<void>((resolve, reject) => {
+          if (img.complete && img.naturalWidth > 0) {
+            resolve()
+            return
+          }
+          img.addEventListener('load', () => resolve(), { once: true })
+          img.addEventListener('error', () => reject(new Error(SHEET)), { once: true })
+        })
+        owned = await createImageBitmap(img)
+      } catch {
+        return
+      }
+      if (!live) {
+        owned.close()
+        return
+      }
+      bitmap.current = owned
+      paint(shown.current < 0 ? START : shown.current)
+      setReady(true)
+    })()
+    return () => {
+      live = false
+      img.src = ''
+      bitmap.current = null
+      owned?.close()
+    }
+  }, [tracks, paint])
+
+  /**
    * Tell the rest of the page when the greeting is over — the settings island
    * waits for it before showing itself on a phone.
    *
@@ -862,9 +1056,6 @@ export function CharacterStage() {
 
   const render = useCallback(
     (gaze: Gaze, delta: number) => {
-      const img = sheet.current
-      if (!img) return
-
       // Aim: the frame that best answers where the cursor is, counting BOTH how
       // closely it looks there and how far the walk to it would be.
       //
@@ -919,16 +1110,17 @@ export function CharacterStage() {
       if (frame === shown.current) return
       shown.current = frame
 
-      img.style.transform = frameTransform(frame)
+      paint(frame)
     },
-    [],
+    [paint],
   )
 
   useGazeTracking(stage, tracks ? render : noop)
 
   // Without a cursor there is nothing to follow, so the sheet is never fetched
-  // — which is also what keeps a megabyte off a phone's budget. A single frame
-  // stands in, and the wave plays over it once.
+  // — which is also what keeps 3.6 MB off a phone's budget, and why the
+  // preload in index.html carries a `(pointer: fine)` of its own. A single
+  // frame stands in, and the wave plays over it once.
   //
   // The wave keeps its own backdrop and sits in a frame, rather than being cut
   // out like the sheet is. It was shot with a pool of light in the middle that
@@ -939,7 +1131,6 @@ export function CharacterStage() {
   //
   // The still stays underneath as the layer that holds the size and marks the
   // character ready, and it is what shows if the video is missing.
-  const src = tracks ? SHEET : STILL
   const wave = !tracks && !waveBroken
   // The wave is a 16:9 shot. The head sits at x=630 of 1280 and the raised hand
   // reaches out to x=146, so the furthest the subject gets from the head is
@@ -967,8 +1158,6 @@ export function CharacterStage() {
         maxWidth: LAYOUT.maxWidth,
         aspectRatio: aspect,
         translate: `${LAYOUT.offsetX} ${LAYOUT.offsetY}`,
-        ['--character-cols' as string]: tracks ? manifest.columns : 1,
-        ['--character-rows' as string]: tracks ? manifest.rows : 1,
         ['--character-mobile-max' as string]: LAYOUT.mobileMaxWidth,
         // Drives both the arriving clip's fade and the leaving clip's delay,
         // so the two cannot come apart. See CLIP_FADE.
@@ -983,35 +1172,28 @@ export function CharacterStage() {
       // uncover IS opaque, so there the hold comes off and they go at once.
       data-idle-leaving={phase === 'wave' || undefined}
     >
-      <img
-        className="character__sheet"
-        // Hidden, not unmounted: it still carries the size, and it comes back
-        // if the video turns out to be unplayable.
-        data-covered={filmShowing || undefined}
-        ref={sheet}
-        src={src}
-        // Empty on the sheet, named on the still, because they are two
-        // different pictures behind one element. The sheet is a 15x16 grid of
-        // every frame of the clip — a mechanism, described instead by the
-        // hidden line below — while the still is a portrait, and it is the
-        // first image on the page under the mobile-first crawl, so it is what
-        // a search result shows. Naming the subject is the only signal Google
-        // has for who that is.
-        alt={tracks ? '' : t.a11y.characterStill}
-        draggable={false}
-        decoding="async"
-        style={
-          tracks
-            ? {
-                // The frame the walk starts from, so the first paint and the
-                // first step are the same picture — and so that what the sheet
-                // shows is a character, not the top-left corner of a grid.
-                transform: frameTransform(START),
-              }
-            : undefined
-        }
-        onLoad={() => setReady(true)}
-      />
+      {tracks ? (
+        // The frames are drawn here, one blit each — see `paint`, which is
+        // also where the layer this replaces is measured. Nothing to announce:
+        // the hidden line at the bottom is what describes the character, and
+        // it is only there in this same case.
+        <canvas className="character__sheet" ref={canvas} aria-hidden="true" />
+      ) : (
+        <img
+          className="character__sheet"
+          // Hidden, not unmounted: it still carries the size, and it comes
+          // back if the video turns out to be unplayable.
+          data-covered={filmShowing || undefined}
+          src={STILL}
+          // The still is a portrait, and it is the first image on the page
+          // under the mobile-first crawl, so it is what a search result shows.
+          // Naming the subject is the only signal Google has for who that is.
+          alt={t.a11y.characterStill}
+          draggable={false}
+          decoding="async"
+          onLoad={() => setReady(true)}
+        />
+      )}
       {wave ? (
         <video
           className="character__wave"
