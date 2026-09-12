@@ -648,3 +648,208 @@
 .dialog__link {
   margin-block-start: var(--space-6);
 }
+
+/* ---------------------------------------------------------------------------
+   REPOSITORY STATUS
+   ---------------------------------------------------------------------------
+   The one part of a project that is not written down anywhere: the build reads
+   it from GitHub and it changes between deploys. It is styled as instrumentation
+   rather than as prose — mono, small, aligned — so that it reads as a readout
+   and not as another paragraph making claims.
+   --------------------------------------------------------------------------- */
+
+/* The badge on the card. Sits above the hover screenshot on purpose: it is the
+   one thing on the cover that is worth keeping legible while the preview is
+   coming up. */
+.project__pulse {
+  position: absolute;
+  z-index: 2;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.55rem 0.2rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-glass-strong);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.project__pulse-dot,
+.repo__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  /* The ring is drawn by the shadow rather than a second element, so the whole
+     signal is one box that can be animated in one place. */
+  box-shadow: 0 0 0 0 var(--accent-ring);
+  animation: repo-pulse 2600ms var(--ease-out) infinite;
+}
+
+@keyframes repo-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--accent-ring);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
+/* A heartbeat is exactly the kind of repeating movement the preference is
+   about, so it stops entirely. The dot stays — the colour is the signal. */
+@media (prefers-reduced-motion: reduce) {
+  .project__pulse-dot,
+  .repo__dot {
+    animation: none;
+  }
+}
+
+/* Last activity, above the numbers: the single line that answers "is this
+   still moving?" before anything has to be read. */
+.repo__pulse {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.repo__pulse time {
+  color: var(--muted-strong);
+  letter-spacing: 0.03em;
+  text-transform: none;
+}
+
+.repo__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.repo__stats dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+.repo__stats dd {
+  margin: 0.3rem 0 0;
+  font-size: var(--text-sm);
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The head commit, as a line you can click through to. */
+.repo__commit {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-block-start: var(--space-4);
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-sunken);
+  color: var(--muted);
+  text-decoration: none;
+  transition: border-color var(--dur-base) var(--ease-out),
+    color var(--dur-base) var(--ease-out);
+}
+
+.repo__commit:hover,
+.repo__commit:focus-visible {
+  border-color: var(--border-strong);
+  color: var(--foreground);
+}
+
+.repo__commit svg {
+  flex: none;
+  opacity: 0.65;
+}
+
+.repo__sha {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--accent);
+}
+
+/* The subject line, and only ever one line of it: a long commit message must
+   not be allowed to push the panel's layout around. */
+.repo__subject {
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repo__languages {
+  margin-block-start: var(--space-4);
+}
+
+.repo__bar {
+  display: flex;
+  overflow: hidden;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+}
+
+.repo__bar > span {
+  background: var(--accent);
+}
+
+.repo__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.repo__legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.repo__swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.repo__share {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Where the numbers came from and how old they are. Without this line the
+   panel would be asking to be trusted without saying why it should be. */
+.repo__source {
+  margin: var(--space-4) 0 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  color: var(--faint);
+}

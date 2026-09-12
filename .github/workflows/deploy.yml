@@ -75,10 +75,17 @@ jobs:
       # CV rebuild does not move it. `fetch-depth: 0` is not needed for that —
       # the checkout above leaves the head commit, which is the one being
       # published.
+      # GITHUB_TOKEN is here only for the rate limit. The build reads the public
+      # repositories behind the projects through the GitHub API (see the
+      # `repo-status` plugin), and an unauthenticated runner shares its IP —
+      # and its 60 requests an hour — with every other job on that machine.
+      # The token Actions issues for this run lifts that to 1,000 an hour, and
+      # needs no scope beyond the `contents: read` already granted above.
       - name: Build
         env:
           BASE_PATH: ${{ steps.base.outputs.path }}
           SITE_URL: ${{ steps.base.outputs.url }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run build
 
       # Only the built copy is stamped. The PDF in the repository stays exactly
