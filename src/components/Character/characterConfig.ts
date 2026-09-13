@@ -85,6 +85,48 @@ export const CLIP = {
 }
 
 /**
+ * The frames the character spends blinking, as inclusive [first, last] pairs of
+ * sheet indices.
+ *
+ * The walk can stop anywhere, and where it stops is wherever the cursor is
+ * pointing. Land on one of these and the character sits there with its eyes
+ * shut for as long as the pointer stays put, which is the one pose in the
+ * recording that is only ever meant to be passed through. So the runtime does
+ * two things with this list: it never aims at a frame in it, and it crosses one
+ * at the MAX_TRAVEL ceiling instead of at the eased speed — see the render loop
+ * in CharacterStage.
+ *
+ * Read off the recording as 174-193, 370-392 and 515-535, at 60 fps. The sheet
+ * is that same recording at its own 24 — 10.01s, 240 frames, one sheet frame
+ * per source frame — so the numbers come across at 24/60, and 515-535 lands on
+ * 206-214.
+ *
+ * Then checked against the frames themselves rather than trusted: cropping the
+ * eye band out of all 240 and reading them, the lid is down over 70-75, 149-156
+ * and 207-213, and the frames on either side of each are the ones where it is
+ * on its way. The ranges below are those, with a frame of margin, so nothing
+ * half-lidded is a resting place either.
+ *
+ * What it costs is small and was measured over a 21x21 grid of gaze targets
+ * covering the whole reachable square: 379 of the 441 lose nothing at all, the
+ * mean gaze error rises by 0.0057, and 18 targets lose more than 0.05. The
+ * worst is a cursor dead level and 0.7 to the left, where frame 211 answered at
+ * 0.004 and the nearest open-eyed frame answers at 0.222 — which is inside the
+ * error the aim already carries, since the nearness term in the manifest puts
+ * the average miss at 0.332. Eight of the nine cardinal directions are
+ * untouched; the ninth, straight up, moves from frame 69 to 68 and 0.000 to
+ * 0.030.
+ *
+ * 29 of the ring's 207 frames, then, in exchange for a character that cannot be
+ * caught with its eyes closed.
+ */
+export const BLINKS: readonly (readonly [number, number])[] = [
+  [69, 76],
+  [148, 157],
+  [206, 214],
+]
+
+/**
  * Ceiling on how fast the clip is allowed to run, in frames per second.
  *
  * The sheet holds the recording at its own frame rate, so 24 is life speed.

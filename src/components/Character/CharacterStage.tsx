@@ -3,6 +3,7 @@ import { announceGreetingDone } from '../../hooks/useGreeting'
 import { useLanguage } from '../../hooks/useLanguage'
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion'
 import {
+  BLINKS,
   CLIP,
   CLIP_FADE,
   FOLLOW,
@@ -108,6 +109,23 @@ function wrap(frame: number) {
   return FIRST + (((frame - FIRST) % SPAN) + SPAN) % SPAN
 }
 
+/**
+ * Frame -> is the character mid-blink here.
+ *
+ * A table and not a search through BLINKS: the aim loop below asks this once
+ * per frame of the ring, 207 times every animation frame, and a lookup is the
+ * only shape of that which costs nothing.
+ */
+const BLINKING = (() => {
+  const t = new Uint8Array(manifest.count)
+  for (const [from, to] of BLINKS) {
+    for (let i = from; i <= to; i += 1) {
+      if (i >= 0 && i < t.length) t[i] = 1
+    }
+  }
+  return t
+})()
+
 /** Where a frame sits on the sheet, in the sheet's own pixels. */
 function frameSource(frame: number) {
   return {
@@ -134,6 +152,9 @@ const START = (() => {
   let best = FIRST
   let bestCost = Infinity
   for (let i = FIRST; i <= CLIP.last; i += 1) {
+    // Opening on a blink would be the one frame of it anybody is guaranteed to
+    // see, since nothing has moved yet to walk away from it.
+    if (BLINKING[i]) continue
     const dx = GAZE[i * 2] + 1
     const dy = GAZE[i * 2 + 1] - 1
     const cost = dx * dx + dy * dy
@@ -1086,6 +1107,13 @@ export function CharacterStage() {
       let aim = 0
       let bestCost = Infinity
       for (let i = FIRST; i <= CLIP.last; i += 1) {
+        // Never a frame the character is blinking on. The aim is where the walk
+        // comes to rest, and it stays there for as long as the pointer does —
+        // so aiming at a blink is how the character ends up sitting with its
+        // eyes shut. Excluded rather than merely discouraged: a penalty still
+        // picks one when nothing else is close, and "rarely stuck" is not what
+        // this needs to be. What it costs is measured on BLINKS.
+        if (BLINKING[i]) continue
         const dx = GAZE[i * 2] - gaze.x
         const dy = GAZE[i * 2 + 1] - gaze.y
         const far = ringDelta(here, i) / SPAN
@@ -1101,6 +1129,22 @@ export function CharacterStage() {
       // between instead of skipping over them.
       const limit = MAX_TRAVEL * delta
       let step = ringDelta(here, aim) * (1 - Math.exp(-FOLLOW * delta))
+
+      // Inside a blink, drop the easing and go at the ceiling.
+      //
+      // The easing is a function of how far there is left to go, so a blink
+      // sitting just short of the aim is crossed at walking pace — the eyes
+      // shut, and then stay shut while the last frames are eased through. At
+      // the ceiling the whole of one takes about nine frames at 60 a second,
+      // which is the length of a real blink rather than a pause on one.
+      //
+      // The direction is whichever way the walk was already going, and it
+      // always has one: the aim is never a blink frame, so there is always
+      // somewhere to be leaving for.
+      if (BLINKING[wrap(Math.round(here))] && step !== 0) {
+        step = step > 0 ? limit : -limit
+      }
+
       if (step > limit) step = limit
       else if (step < -limit) step = -limit
       // Wrapped, because the step can now carry the walk off either end.
