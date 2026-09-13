@@ -97,16 +97,31 @@ function Cv({ ready }: { ready: boolean }) {
         {hasDocs ? (
           <button
             type="button"
-            /* The label shift is German-only. It centres the label in the room
-               the badge leaves rather than in the pill, which is right for
-               "Zeugnisse und Zertifizierungen" — long enough that the pill is
-               mostly label — and wrong for "Ver certificados" and "View
-               certificates", which are short enough that the free room is
-               nearly the whole pill and the shift would carry them past the
-               middle instead of onto it. That is the same reasoning the view
-               button already sits out for; see `.reveal-btn--download` in
-               about.css. */
-            className={`reveal-btn${language === 'de' ? ' reveal-btn--docs' : ''}`}
+            /* Which labels are centred in the room the badge leaves rather
+               than in the pill. German takes it because "Zeugnisse und
+               Zertifizierungen" is long enough that the pill is mostly label.
+               Spanish takes it by choice: measured at 1280px, "Ver
+               certificados" sat dead centre of its 213.6px pill, which put it
+               21.2px left of the middle of the room the disc actually leaves,
+               and the room is what the eye reads as the space the label is in.
+
+               English sits it out, as does the view button at every length —
+               see `.reveal-btn--download` in about.css.
+
+               It also stops the label running under the disc. Between the
+               phone layout and about 640px the three pills share one row and
+               this one is squeezed to 145.9px at 513; centred in the pill the
+               label started 20.3px INSIDE the disc, and 13.2 at 560, 7.2 at
+               600, 1.4 at 639. Shifted, the gap is positive at every width and
+               all but equal to the slack on the other side — 0.9/1.9 at 513,
+               8/9 at 560, 34.8/35.8 from 760 up, which is what being centred
+               in the free room means.
+
+               Phone is the other way round, and about.css handles it: there
+               the label goes on the pill's own middle. */
+            className={`reveal-btn${
+              language === 'de' || language === 'es' ? ' reveal-btn--docs' : ''
+            }`}
             ref={docsButton}
             onClick={() => {
               setDocsOrigin(docsButton.current?.getBoundingClientRect() ?? null)

@@ -585,6 +585,23 @@
   .reveal-btn__label {
     min-width: 0;
   }
+
+  /* Spanish certificates only: centred in the pill here, not in the room the
+     badge leaves — the opposite of what the same button does on a wide screen,
+     and of what its two neighbours do here.
+
+     It can afford the symmetric reserve that the rule above drops for width.
+     The certificates button has the whole second row to itself, so 350px of
+     pill less 45.6 on each side still leaves 258.8 for a label that needs far
+     less, and nothing wraps. With the reserve back, `justify-content: center`
+     does the centring on its own: measured, the label moves from 17.2px right
+     of the pill's middle onto it.
+
+     `:lang(es)` reads the `lang` the app already sets on <html>, so this
+     follows the language switcher without a second class to keep in step. */
+  :lang(es) .reveal-btn--docs {
+    padding-inline: calc(var(--rb-pad) + var(--rb-badge) + var(--rb-gap));
+  }
 }
 
 /* --- Responsive ---------------------------------------------------------- */
