@@ -456,13 +456,16 @@
    the pill, so half of that column is the shift that puts the label in the
    middle of what is actually empty.
 
-   Opted into per button, and for the certificates button per language, rather
-   than applied to all three: a short label leaves free room that is nearly the
-   whole pill, so the shift would take it past the middle instead of onto it.
-   That is why the view button sits it out at every length, and why the
-   certificates button only takes it for the German "Zeugnisse und
-   Zertifizierungen" and not for "Ver certificados" or "View certificates" —
-   About.tsx decides which.
+   Opted into per button rather than applied to all three. The certificates
+   button takes it in every language, and so does the download button. The view
+   button sits it out: "Ver CV", "View CV" and "Lebenslauf ansehen" are short
+   enough that the free room is nearly the whole pill, so shifting them would
+   carry them past its middle rather than onto it.
+
+   It is also what keeps the label clear of the disc once the row is squeezed.
+   Centred in the pill instead, "Ver certificados" started 20.3px inside the
+   disc at 513px and "View certificates" 23px; shifted, both sit clear of it at
+   every width. See the media query at the end of this file for the sweep.
 
    A transform and not a margin or a padding: all three move the label, but
    only a transform is outside layout, so the pill keeps the width it sizes
