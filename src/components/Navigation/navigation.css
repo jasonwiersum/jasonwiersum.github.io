@@ -121,10 +121,21 @@
    the document a horizontal scroll.
 
    Padding plus an equal negative margin is how it clips without eating the
-   islands' shadows: the box grows 16px on every side and shifts back by the
-   same amount, so the content lands exactly where it did and the clip boundary
-   sits 16px clear of it. Sixteen is also enough overhang for an island to be
-   under the gear before it is cut, rather than appearing out of the gap. */
+   islands' shadows: the box grows by the padding on each side and shifts back
+   by the same amount, so the content lands exactly where it did and the clip
+   boundary sits that far clear of it.
+
+   Only the right side is a real clip, and it is the one that stays at 16px.
+   That is the overhang that puts a departing island under the gear before it is
+   cut, so it slides away rather than vanishing into the gap — and nothing the
+   panel paints reaches it, since an island's shadow only travels 5px sideways.
+
+   The other three sides clip nothing on purpose and are opened to the full
+   --island-bleed, which is where the shadow actually reaches the ground rather
+   than where it stops being obvious. At 16 the bottom was cutting dark's shadow
+   with a quarter of it still standing, and that left a hard horizontal line
+   under the islands every time the panel opened. See the token for the
+   measurement. */
 .settings__panel {
   position: absolute;
   top: 0;
@@ -133,13 +144,19 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 16px;
-  margin: -16px;
+  padding: var(--island-bleed) 16px var(--island-bleed) var(--island-bleed);
+  margin: calc(-1 * var(--island-bleed)) -16px calc(-1 * var(--island-bleed))
+    calc(-1 * var(--island-bleed));
   overflow: hidden;
+  /* The box is now three times as tall as the islands inside it, and all of the
+     difference is empty room for a shadow. It must not also be a lid over the
+     page: the islands take their own clicks back below. */
+  pointer-events: none;
 }
 
 .settings__panel > * {
   will-change: transform, opacity;
+  pointer-events: auto;
 }
 
 /* Holds the gear while it is parked off the right-hand edge waiting to arrive.
@@ -152,11 +169,21 @@
    Overflow clips at the PADDING edge, so the right padding is exactly the gap
    to the screen edge and the gear appears from the edge itself rather than from
    somewhere short of it. The other three sides are padded well clear so the
-   glass shadow is not cut off. */
+   glass shadow is not cut off — on the same --island-bleed as the panel, so the
+   two clips in this corner cannot drift apart. */
 .settings__pocket {
   overflow: hidden;
-  padding: 24px var(--space-4) 24px 24px;
-  margin: -24px calc(-1 * var(--space-4)) -24px -24px;
+  padding: var(--island-bleed) var(--space-4) var(--island-bleed)
+    var(--island-bleed);
+  margin: calc(-1 * var(--island-bleed)) calc(-1 * var(--space-4))
+    calc(-1 * var(--island-bleed)) calc(-1 * var(--island-bleed));
+  /* Same reason as the panel: what is left of this box once the gear is taken
+     out of it is room for a shadow, not a lid over the page. */
+  pointer-events: none;
+}
+
+.settings__pocket > * {
+  pointer-events: auto;
 }
 
 @media (max-width: 720px) {
