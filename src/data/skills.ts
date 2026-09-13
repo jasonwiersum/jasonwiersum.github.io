@@ -35,7 +35,15 @@ export const skillGroups: SkillGroup[] = [
   },
   {
     category: 'tools',
-    items: [{ name: 'Atlassian' }, { name: 'Adobe Creative Cloud' }],
+    items: [
+      // The editors lead: they are the tool of the trade, and the two that
+      // follow are what the work is tracked and designed in.
+      { name: 'VS Code' },
+      // The full product name, as project one's tooling list already spells it.
+      { name: 'IntelliJ IDEA' },
+      { name: 'Atlassian' },
+      { name: 'Adobe Creative Cloud' },
+    ],
   },
   {
     category: 'design',
