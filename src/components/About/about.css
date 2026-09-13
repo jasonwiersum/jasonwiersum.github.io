@@ -428,7 +428,22 @@
   font-family: var(--font-display);
   font-size: var(--text-sm);
   font-weight: 520;
-  white-space: nowrap;
+  /* The label wraps rather than being cut. It used to be `nowrap`, and the
+     button's `overflow: hidden` then made that a silent clip: the three pills
+     share one row and shrink with it, and "Zeugnisse und Zertifizierungen" ran
+     49.5px under the disc at 513px and was still 12.4px under it at 760.
+     Wrapping costs nothing where there is room — max-content ignores soft wrap
+     opportunities, so the row is the same width it always was on a wide screen
+     — and where there is not, it breaks the label across lines instead of
+     hiding its first word behind the disc.
+
+     Wrapping only helps while a single word still fits. Below 54rem it does
+     not, and the stacked layout takes over; see the note on that media query
+     for the sweep. */
+  white-space: normal;
+  /* justify-content centres the label's box in the pill; this centres the
+     lines within that box once there is more than one. */
+  text-align: center;
   overflow: hidden;
   cursor: var(--cursor-arrow), pointer;
   box-shadow: var(--shadow-sm);
@@ -460,6 +475,11 @@
 .reveal-btn__label {
   position: relative;
   z-index: 1;
+  /* A flex item will not go below its min-content width, which for a wrapping
+     label is its longest word. Without this the label keeps that width, the
+     pill cannot give it, and the overflow clips it — the wrap above would never
+     get the chance to happen. */
+  min-width: 0;
   transform: translateX(var(--rb-shift));
   transition: transform var(--rb-dur) var(--rb-ease);
 }
@@ -535,10 +555,30 @@
    and the labels wrap instead — the badge shrinks, the pill grows taller.
    That reads better than one button above the other.
 
+   54rem, raised from 32. Wrapping carries the three-across row a long way down,
+   but not to the old breakpoint: no amount of it helps once a single word is
+   wider than the text box, and "Zertifizierungen" is 100.4px on its own.
+
+   Swept in 10px steps with the German labels, which are the longest of the
+   three, the text box grows about 0.3px per pixel of viewport and the word
+   overflows it from 810px down — by 1px at 810, 4 at 800, 7 at 790, 10 at 780,
+   13 at 770, and far more below, where the box is 47.9px at 560 and 33.9 at
+   513. It first clears at 820 with 1.6px to spare. 54rem is 864, which leaves
+   15px: enough that the label is not riding on the exact metrics of a font
+   that may not have loaded.
+
+   Neither alternative was worth it. `hyphens: auto` does nothing — the
+   hyphenation dictionary is not there to rely on — and `overflow-wrap:
+   break-word` does fit the word, by splitting it across lines and taking the
+   pill from 62.8px tall to 110.8.
+
+   Below 54rem this layout gives the word its room the only way that works:
+   by taking the certificates button out of the row entirely.
+
    After the rules above, not before them: these carry the same specificity, so
    whichever comes last wins and a media query placed earlier in the file loses
    silently. */
-@media (max-width: 32rem) {
+@media (max-width: 54rem) {
   .about__cv-actions {
     width: 100%;
     /* Two columns and wrap, rather than one row shared three ways. The row is

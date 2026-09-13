@@ -226,6 +226,34 @@ p {
    Buttons
    =========================================================================== */
 
+/* A control is not a passage of text.
+
+   Hold a finger on any of these and the phone did what it does to prose:
+   raised the selection handles, highlighted the label and offered the
+   copy/look-up callout over the top of the button being pressed. Nobody is
+   trying to copy the word "Enviar". `user-select: none` takes the label out of
+   the selection model so the press stays a press, and
+   `-webkit-touch-callout: none` stops iOS raising its own sheet over a link on
+   the same gesture — which `user-select` alone does not.
+
+   `button` covers most of them; the three classes are the ones that can also
+   be an <a> — the CV download, the dialog's outbound link and the social row —
+   where the element is a link by nature and a button by role. Nav items,
+   language pills, the theme toggle, the project cards and the back-to-top
+   control are all real buttons and are already in.
+
+   Not scoped to a touch query. Selecting a button's label is not something
+   anyone does with a mouse either, and `(pointer: coarse)` would miss a
+   touchscreen laptop and a phone asking for the desktop site. */
+button,
+.btn,
+.reveal-btn,
+.contact__link {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 .btn {
   font-family: var(--font-display);
   --btn-bg: var(--accent);
