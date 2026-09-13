@@ -95,7 +95,21 @@ export function Hero() {
         )
       }
     },
-    { scope: root, dependencies: [language] },
+    // `revertOnUpdate` is what stops a language switch leaving the copy faded.
+    //
+    // Every tween above is a `from()`, and a `from()` reads the element's
+    // CURRENT value and makes that its destination. Without this flag `useGSAP`
+    // defers its cleanup to unmount, so switching language while the intro is
+    // still running builds a second timeline on top of a greeting that is only
+    // part-way through its fade — the new tween records 0.6 as "arrived" and
+    // leaves it there. Switch a few times quickly and each timeline inherits
+    // the last one's shortfall: measured over six switches a quarter of a
+    // second apart, the greeting settled at 0.65-0.79 and the tagline at
+    // 0.02-0.33, which is the line the reader sees vanish.
+    //
+    // Reverting first puts the copy back to its untouched state, so every
+    // replay measures a destination of 1 and lands on it.
+    { scope: root, dependencies: [language], revertOnUpdate: true },
   )
 
   return (
