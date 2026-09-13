@@ -84,7 +84,7 @@
 }
 
 .project__cover-mark {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: clamp(2.5rem, 7vw, 3.5rem);
   font-weight: 300;
   letter-spacing: -0.04em;
@@ -438,8 +438,9 @@
 /* How many documents are behind a group, so the first step says what it is
    offering rather than making the reader open both to find out. */
 .docs__row-count {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--text-micro);
+  font-variant-numeric: tabular-nums;
   color: var(--muted);
 }
 
@@ -727,6 +728,7 @@
 }
 
 .repo__pulse time {
+  font-family: var(--font-sans);
   color: var(--muted-strong);
   letter-spacing: 0.03em;
   text-transform: none;
@@ -839,7 +841,7 @@
 }
 
 .repo__share {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--text-micro);
   color: var(--faint);
   font-variant-numeric: tabular-nums;
