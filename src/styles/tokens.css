@@ -32,7 +32,6 @@
   --text-lg: clamp(1.125rem, 1.06rem + 0.32vw, 1.3125rem);
   --text-xl: clamp(1.375rem, 1.24rem + 0.66vw, 1.75rem);
   --text-2xl: clamp(1.75rem, 1.5rem + 1.25vw, 2.5rem);
-  --text-3xl: clamp(2.25rem, 1.7rem + 2.75vw, 4rem);
   --text-4xl: clamp(2.75rem, 1.85rem + 4.5vw, 5.75rem);
 
   --leading-tight: 1.06;
@@ -55,8 +54,6 @@
   --space-6: 2rem;
   --space-7: 3rem;
   --space-8: 4rem;
-  --space-9: 6rem;
-  --space-10: 8rem;
 
   --section-padding-y: clamp(5rem, 11vh, 9.5rem);
   --gutter: clamp(1.25rem, 5vw, 4.5rem);
@@ -101,7 +98,6 @@
   /* --- Motion ------------------------------------------------------------ */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-spring: cubic-bezier(0.34, 1.42, 0.5, 1);
   --dur-fast: 140ms;
   --dur-base: 240ms;
   --dur-slow: 420ms;
@@ -191,7 +187,6 @@
      six seconds the whole page varied by 2.6/255 — still, to any eye. */
   --backdrop-scrim: 0.22;
   --glow-a: rgba(0, 56, 255, 0.14);
-  --glow-b: rgba(255, 138, 76, 0.1);
   /* The static wash's own pair, separate from the two above only because those
      also draw the hero's loading placeholder, which was not asked to change.
      Same colours and same construction — the alphas are what moved.
@@ -384,7 +379,6 @@
      near-black, which is a far larger step than anything the light one makes. */
   --backdrop-scrim: 0.34;
   --glow-a: rgba(91, 132, 255, 0.16);
-  --glow-b: rgba(255, 138, 76, 0.08);
   --wash-a: rgba(91, 132, 255, 0.28);
   --wash-b: rgba(255, 138, 76, 0.06);
 

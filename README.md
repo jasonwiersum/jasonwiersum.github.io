@@ -1,8 +1,13 @@
 # Jason Wiersum — Portfolio
 
-Single-page personal portfolio: React + TypeScript + Vite, a Three.js character
-in the hero, GSAP for all motion, three languages, light/dark themes and a real
-contact form powered by Web3Forms. Deployed to GitHub Pages.
+Single-page personal portfolio: React + TypeScript + Vite, a hand-drawn character
+in the hero that follows the cursor, GSAP for all motion, three languages,
+light/dark themes and a real contact form powered by Web3Forms. Deployed to
+GitHub Pages.
+
+The character is a 2D frame sheet, not 3D — see [The character](#the-character).
+The only WebGL on the page is the drifting background gradient, which uses
+`ogl`.
 
 ---
 
@@ -24,22 +29,26 @@ Node 20 or newer.
 ```
 src/
 ├── components/
-│   ├── Navigation/    FloatingNavigation · LanguageSwitcher · ThemeToggle
+│   ├── Navigation/    FloatingNavigation · SettingsIsland · LanguageSwitcher
+│   │                  ThemeToggle
 │   ├── Character/     frame sheet + manifest, gaze tracking
 │   ├── Hero/          first screen
-│   ├── About/         biography, facts panel, the four creative pillars
+│   ├── About/         biography, facts panel, timeline, CV and document dialogs
 │   ├── Skills/        technologies by category + spoken languages
-│   ├── Projects/      grid + project card   (Skills + Projects make up #work)
+│   ├── Projects/      grid · card · detail dialog · live repository panel
+│   │                  (Skills + Projects make up #work)
 │   ├── Contact/       section + Web3Forms form
-│   └── Layout/        footer, background ambience
+│   └── Layout/        footer, backdrop, grainient, ambience
 ├── hooks/             theme · language · section observer · scroll · reveal
+│                      dialog transition · greeting · reduced motion
 ├── i18n/              translations.ts  ← every interface string
-├── data/              projects.ts · skills.ts
+├── data/              projects.ts · skills.ts · timeline.ts · documents.ts
+│                      repoStatus.ts · repoStatuses.ts
 ├── config/            site.ts (personal data, links) · web3forms.ts
 └── styles/            tokens.css (design system) · globals.css
 
 public/
-├── character/         frames.webp · still.webp — built, do not edit by hand
+├── character/         frames.webp · still-<hash>.webp — built, never edit by hand
 │                      wave.mp4 — optional, played once on touch devices
 ├── cv/                the CV offered for download in About
 └── images/            portrait · project shots
@@ -48,7 +57,7 @@ source-media/          build inputs, never served — see its README
 └── final-chroma.mp4   the character's source footage
 
 scripts/
-└── build-character.py final-chroma.mp4 → frames.webp + still.webp + manifest.json
+└── build-character.py final-chroma.mp4 → frames.webp + still-<hash>.webp + manifest.json
 ```
 
 The page has four sections — `#home`, `#work`, `#about`, `#contact` — in one
@@ -109,7 +118,7 @@ exact and costs nothing per step.
 
 ```
 public/character/frames.webp              # the clip, in order, one sheet
-public/character/still.webp               # one frame, for touch devices
+public/character/still-<hash>.webp        # one frame, for touch devices
 src/components/Character/manifest.json    # sheet geometry + per-frame gaze
 ```
 
@@ -149,7 +158,7 @@ decoded. Desktop handles that easily; a phone would struggle, and iOS silently
 downsamples very large images, which would break the sheet's alignment.
 
 It never has to. Tracking needs a cursor, so on a coarse pointer the sheet is
-never fetched. Those devices get `still.webp` (21 KB), with
+never fetched. Those devices get the still (21 KB), with
 `public/character/wave.mp4` played once over the top of it if that file exists.
 
 The wave is not built by the pipeline — drop the file in and it is used. It is
@@ -250,18 +259,53 @@ Edit **`src/data/projects.ts`**. Each entry has:
 
 ```ts
 {
-  id: 'project-01',
+  id: 'project-02',
   title:       { es: '…', en: '…', de: '…' },
   description: { es: '…', en: '…', de: '…' },
-  technologies: ['Java', 'Spring'],
+  technologies: ['Java 21', 'Spring Boot', 'PostgreSQL'],
   image: 'images/my-project.jpg', // file in public/images — no leading slash
+  logo: 'images/projects/mark.svg',
   url: 'https://…',               // null while there is nothing to link to
-  placeholder: false,             // true shows the "placeholder" badge
+  placeholder: false,             // true shows the card as unfinished
+  repo: { owner: 'jasonwiersum', name: 'QuickBite' },  // see below
+  tooling: ['Maven', 'IntelliJ IDEA'],
+  detail: { … },                  // the long copy inside the dialog
 }
 ```
 
-The three current entries are placeholders and are visibly marked as such.
-Cover images go in `public/images/`; without one, a generated cover is used.
+Two of the three entries are real; the third is still a placeholder and is
+visibly marked as one. Cover images go in `public/images/`; without one, a
+generated cover is used.
+
+### The live repository panel
+
+A project that carries a `repo` gets a panel in its dialog showing the state of
+that GitHub repository: when it last moved, its commit and star counts, the head
+commit, and the language split.
+
+The figures are read **at build time**, not in the browser. The Vite plugin
+`repoStatus()` in `vite.config.ts` serves them through a virtual module,
+`virtual:repo-status`. The reason is the rate limit: the unauthenticated GitHub
+API allows 60 requests an hour *per IP address*, and visitors behind carrier NAT
+share one. Reading at build time means one request per deploy instead of one per
+visitor, and the nightly rebuild keeps the snapshot under a day old.
+
+The build passes `GITHUB_TOKEN` (the token GitHub Actions issues itself) purely
+to raise that limit. If the call fails for any reason the panel is left out and
+the build carries on — it warns, it never breaks the deploy. So a local
+`npm run build` without a token simply produces a site without the panel.
+
+---
+
+## Documents: CV and certificates
+
+The About section offers two things behind buttons: the CV, and the references
+and certificates. Both open the same dialog shell.
+
+The document list is **`src/data/documents.ts`**, grouped into references and
+certifications. The files themselves live in `public/zeugnisse/` and
+`public/zert/`. The CV is `public/cv/`, and a nightly GitHub Actions run stamps
+it with the current date so it never looks stale.
 
 ---
 
@@ -305,7 +349,14 @@ which just looked broken.)
 
 ## Deploying to GitHub Pages
 
-`.github/workflows/deploy.yml` builds and deploys on every push to `main`.
+`.github/workflows/deploy.yml` builds and deploys on every push to `main`, and
+again nightly at 23:00 UTC.
+
+The nightly run is not busywork. Two things on the page age on their own: the
+date stamped into the CV (`scripts/stamp-cv-date.py`), and the repository panel
+in the project dialogs, which is read at build time. Rebuilding once a day keeps
+both under twenty-four hours old. It is 23:00 and not midnight because the
+scheduler runs in UTC and the CV should carry the right date in Germany.
 
 ### Required one-time setting
 
@@ -343,18 +394,13 @@ BASE_PATH=/my-repo/ npm run build
 
 ## Still to add
 
-Nothing below is invented or filled in with placeholder facts — these are yours
-to supply:
+Everything the earlier drafts of this list were waiting on has since landed: the
+CV, the wave clip, the Bürgermeisterverzeichnis mark, the Open Graph image and
+two real projects are all in the repository. What is left:
 
-- [ ] `public/cv/JasonWiersum-Lebenslauf.pdf` — the CV the About section
-      offers for download (see `public/cv/README.md`)
-- [ ] `public/character/wave.mp4` — the wave played once on touch devices
-- [ ] `public/images/projects/landesamt-logo.png` — the mark on the
-      Bürgermeisterverzeichnis card
-- [ ] Real projects in `src/data/projects.ts`
-- [ ] Project cover images in `public/images/`
+- [ ] The third project in `src/data/projects.ts` — still placeholder copy,
+      and the card says so
 - [ ] A public email address, if you want one shown next to the form
-- [ ] A final professional description, if you want to replace the current
-      About copy
-- [ ] Photographs of yourself, if you want any
-- [ ] An Open Graph share image (`og:image` is deliberately not set yet)
+- [ ] A `GITHUB_TOKEN` is only available inside GitHub Actions, so a local
+      `npm run build` produces a site without the repository panel. That is
+      expected, not a fault.

@@ -340,12 +340,6 @@ button,
   transform: translateY(0);
 }
 
-/* Elements animated in by GSAP start hidden; the `.js-reveal` opt-in keeps the
-   page fully readable if JavaScript motion never runs. */
-.no-js-safe {
-  opacity: 1;
-}
-
 /* ===========================================================================
    Reduced motion
    =========================================================================== */
