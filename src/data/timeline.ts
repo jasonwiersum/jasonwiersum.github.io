@@ -127,8 +127,8 @@ export const milestones: Milestone[] = [
     id: 'athena',
     period: '2011',
     label: {
-      es: 'Administrativo en proyectos de venta',
-      en: 'Administrator on sales projects',
+      es: 'Comercial de Ventas',
+      en: 'Sales Administrator',
       de: 'Kaufmännischer Angestellter im Vertrieb',
     },
     // CV: "09/2011 - 12/2011 Kaufmännischer Angestellter, Athena Marketing
@@ -172,7 +172,7 @@ export const milestones: Milestone[] = [
     id: 'admiral',
     period: '2015 – 2019',
     label: {
-      es: 'Chef de Bar y después jefe de turno',
+      es: 'Chef de Bar y encargado de turno',
       en: 'Chef de Bar, then shift manager',
       de: 'Chef de Bar, danach Schichtleiter',
     },
@@ -189,8 +189,8 @@ export const milestones: Milestone[] = [
     id: 'merkur',
     period: '2019 – 2024',
     label: {
-      es: 'Administrativo',
-      en: 'Commercial administrator',
+      es: 'Comercial de ventas',
+      en: 'Sales administrator',
       de: 'Kaufmännischer Angestellter',
     },
     // CV: 02/2019 - 05/2024, Merkur Casino GmbH, Nürnberg — "Abrechnung,
@@ -198,8 +198,7 @@ export const milestones: Milestone[] = [
     // Datengenauigkeit, Nachvollziehbarkeit und Compliance-Standards."
     //
     // The line takes the third of those three and not the first. Data accuracy
-    // is what any of these jobs claims; compliance is the one a casino's books
-    // actually turn on, and it is the word Jason wants read here.
+    // is what any of these jobs claims;
     place: 'Merkur Casino GmbH, Nürnberg',
     detail: {
       // "cumplimiento normativo" rather than the English word: it is what the
@@ -223,8 +222,8 @@ export const milestones: Milestone[] = [
     // the retraining is where this line was asked to end.
     place: 'GFN GmbH, Nürnberg',
     detail: {
-      es: 'Prácticas en el Bayerisches Landesamt für Statistik..',
-      en: 'Placement at the Bayerisches Landesamt für Statistik.',
+      es: 'Prácticas en el Bayerisches Landesamt für Statistik.',
+      en: 'Internship at the Bayerisches Landesamt für Statistik.',
       de: 'Praktikum beim Bayerischen Landesamt für Statistik.',
     },
     emphasis: true,
