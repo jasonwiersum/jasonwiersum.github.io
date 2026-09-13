@@ -341,11 +341,15 @@
 }
 
 
+/* The years are read as dates, not as code, so they take the page's text face
+   like every other number here. Tabular figures keep the even digit widths the
+   monospaced face was giving them, so a stack of years still lines up. */
 .timeline__period {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
   font-weight: 500;
   letter-spacing: var(--tracking-wide);
+  font-variant-numeric: tabular-nums;
   color: var(--accent);
   margin-block-end: var(--space-2);
 }
