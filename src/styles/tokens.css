@@ -73,6 +73,27 @@
   /* Every floating island shares one height so they line up across the top. */
   --island-h: 2.875rem;
   --island-pad: 5px;
+  /* How far a glass island's shadow reaches past its own box, and therefore how
+     much room any clip around one has to leave.
+
+     Measured, not derived. The arithmetic on the widest layer of
+     --shadow-island — dark's `0 12px 34px -12px`, so 12 down plus half the
+     34px blur less the 12px spread — says 17px, but that is only where the
+     shadow stops being obvious. Sampling the column under the island against a
+     flat ground, and comparing each clip against an unclipped panel, the tail
+     is still being cut at 16px (10/765 lost), at 28 (3) and at 40 (3). It
+     first comes out identical to unclipped at 48, and stays identical at 64.
+     Chromium's blur has a long faint tail that the half-blur figure misses.
+
+     This is what the settings panel had wrong: it clipped at 16, one pixel
+     inside even the conservative figure, and a shadow cut while a quarter of it
+     is still standing is a hard horizontal line rather than a soft edge — which
+     is exactly what showed up under the language island in the dark theme.
+
+     The room is free. Both boxes that use this are absolutely positioned and
+     take no pointer events, so growing them changes nothing but where the clip
+     falls. */
+  --island-bleed: 48px;
 
   /* Shared by every control in the contact form: inputs, textarea, submit. */
   --field-h: 2.75rem;

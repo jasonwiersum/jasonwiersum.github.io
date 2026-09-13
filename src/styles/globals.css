@@ -380,6 +380,19 @@ p {
      at their middle, which is what gave away that they are separate things. */
   margin-block: calc(2 * var(--space-4) + var(--island-h)) var(--space-6);
   border: 1px solid var(--border);
+  /* Three sides, not four. The top edge is the one that runs out from under the
+     settings islands, and a hairline there is read as a line belonging to them
+     rather than to the sheet — the same complaint in both themes. The other
+     three are nowhere near anything and keep the frame.
+
+     Measured in the column under the language island, as the worst single-row
+     step in summed RGB out of 765: light 86 with the panel open, 57 without the
+     hairline. Dark reads 36 either way — it has had this since the hairline was
+     first taken off there, where a light line on a dark ground was the more
+     obvious half of the problem. What is left in both is the sheet's own
+     surface meeting the gradient, which is the sheet arriving and is meant to
+     be seen. */
+  border-top-color: transparent;
   border-radius: var(--radius-xl);
   background: var(--sheet-surface);
   box-shadow: var(--shadow-lg);
@@ -392,14 +405,6 @@ p {
 .page {
   position: relative;
 }
-
-/* Dark only, and only the top: it is the edge that runs out from under the
-   settings islands, and a light hairline there on a dark ground is the most
-   visible part of it. Taking it off measured 26.6 of 255 down to 11.9. */
-[data-theme='dark'] .sheet {
-  border-top-color: transparent;
-}
-
 
 /* Edge to edge on a phone: an inset sheet there costs the content the little
    width it has, and the shadow has nowhere to fall. */
