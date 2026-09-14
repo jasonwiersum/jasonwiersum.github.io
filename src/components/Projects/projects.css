@@ -155,23 +155,6 @@
   }
 }
 
-.project__badge {
-  position: absolute;
-  top: var(--space-3);
-  left: var(--space-3);
-  padding: 0.25rem 0.55rem;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border);
-  background: var(--surface-glass-strong);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
 .project__body {
   display: flex;
   flex-direction: column;

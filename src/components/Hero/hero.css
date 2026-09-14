@@ -158,83 +158,9 @@
   text-wrap: balance;
 }
 
-.hero__role {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.4rem 0.85rem 0.4rem 0.7rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-  font-size: var(--text-xs);
-  font-weight: 480;
-  color: var(--muted-strong);
-  letter-spacing: var(--tracking-normal);
-}
-
-.hero__role-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--success);
-  box-shadow: 0 0 0 3px var(--success-soft);
-  flex: none;
-}
-
-.hero__triad {
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  color: var(--faint);
-}
-
 .hero__stage {
   position: relative;
   min-width: 0;
-}
-
-.hero__scroll {
-  position: absolute;
-  left: 50%;
-  bottom: clamp(1.25rem, 4vh, 2.25rem);
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  color: var(--faint);
-  font-family: var(--font-mono);
-  font-size: var(--text-micro);
-  letter-spacing: var(--tracking-label);
-  text-transform: uppercase;
-  opacity: 0.85;
-  transition: color var(--dur-base) var(--ease-out);
-}
-
-.hero__scroll:hover {
-  color: var(--foreground);
-}
-
-.hero__scroll svg {
-  animation: hero-nudge 2.4s var(--ease-in-out) infinite;
-}
-
-/* Reduces itself, like every other loop — nothing global does it any more. */
-@media (prefers-reduced-motion: reduce) {
-  .hero__scroll svg {
-    animation-duration: 6s;
-  }
-}
-
-@keyframes hero-nudge {
-  0%,
-  70%,
-  100% {
-    transform: translateY(0);
-  }
-  35% {
-    transform: translateY(3px);
-  }
 }
 
 /* --- Tablet and below ---------------------------------------------------- */
@@ -259,10 +185,6 @@
     order: 1;
     width: min(100%, 26rem);
     margin-inline: auto;
-  }
-
-  .hero__scroll {
-    display: none;
   }
 }
 

@@ -58,11 +58,8 @@ const es = {
       'Escribo código. Hago que funcione. Después intento entender por qué funciona.',
       'Transformo ideas en código. Código en bugs. Bugs en experiencia.',
     ],
-    ctaProjects: 'Ver proyectos',
-    ctaContact: 'Escríbeme',
   },
   about: {
-    eyebrow: 'Sobre mí',
     title: 'Más que solo código',
     paragraphs: [
       'Soy desarrollador de aplicaciones y vivo en Nuremberg. Mi camino profesional, sin embargo, no empezó en la informática: estudié en Málaga, dirigí una empresa y trabajé varios años en el ámbito comercial y en la hostelería. Ahí aprendí a asumir responsabilidades, a trabajar con personas, a tratar los datos con cuidado y a asegurarme de que los procesos funcionen de forma fiable.',
@@ -113,8 +110,6 @@ const es = {
   },
   projects: {
     title: 'Trabajos recientes',
-    viewProject: 'Ver proyecto',
-    openDetail: 'Abrir proyecto',
     back: 'Volver al índice',
     client: 'Cliente',
     highlights: 'Qué hace',
@@ -143,14 +138,12 @@ const es = {
       message: 'Mensaje',
       submit: 'Enviar mensaje',
       sending: 'Enviando…',
-      required: 'Obligatorio',
     },
     status: {
       success: '¡Mensaje enviado! Gracias por escribirme.',
       error: 'No se ha podido enviar el mensaje. Inténtalo de nuevo, por favor.',
       network:
         'Sin conexión con el servidor. Comprueba tu red e inténtalo de nuevo.',
-      retry: 'Reintentar',
       sendAnother: 'Enviar otro mensaje',
     },
     validation: {
@@ -216,11 +209,8 @@ const en: Translation = {
       'I write code. I make it work. Then I try to understand why it works.',
       'I turn ideas into code. Code into bugs. Bugs into experience.',
     ],
-    ctaProjects: 'See projects',
-    ctaContact: 'Get in touch',
   },
   about: {
-    eyebrow: 'About',
     title: 'More than just code',
     paragraphs: [
       'I am a Software Developer based in Nürnberg. My path did not begin in IT, though: I studied in Málaga, ran a business and spent several years working in commercial roles and in hospitality. That taught me to take responsibility, to work with people, to handle data carefully and to make sure processes run reliably.',
@@ -271,8 +261,6 @@ const en: Translation = {
   },
   projects: {
     title: 'Recent work',
-    viewProject: 'View project',
-    openDetail: 'Open project',
     back: 'Back to the overview',
     client: 'Client',
     highlights: 'What it does',
@@ -301,13 +289,11 @@ const en: Translation = {
       message: 'Message',
       submit: 'Send message',
       sending: 'Sending…',
-      required: 'Required',
     },
     status: {
       success: 'Message sent! Thanks for getting in touch.',
       error: 'The message could not be sent. Please try again.',
       network: 'No connection to the server. Check your network and try again.',
-      retry: 'Try again',
       sendAnother: 'Send another message',
     },
     validation: {
@@ -366,11 +352,8 @@ const de: Translation = {
       'Ich schreibe Code. Ich bringe ihn zum Laufen. Danach versuche ich zu verstehen, warum.',
       'Ich mache aus Ideen Code. Aus Code Bugs. Aus Bugs Erfahrung.',
     ],
-    ctaProjects: 'Projekte ansehen',
-    ctaContact: 'Schreib mich an',
   },
   about: {
-    eyebrow: 'Über mich',
     title: 'Mehr als nur Code',
     paragraphs: [
       'Ich bin Fachinformatiker für Anwendungsentwicklung aus Nürnberg. Mein beruflicher Weg begann jedoch nicht in der Informatik: Ich habe in Málaga studiert, ein Unternehmen geführt und mehrere Jahre im kaufmännischen Bereich und in der Gastronomie gearbeitet. Dabei habe ich gelernt, Verantwortung zu übernehmen, mit Menschen zu arbeiten, sorgfältig mit Daten umzugehen und dafür zu sorgen, dass Abläufe zuverlässig funktionieren.',
@@ -421,8 +404,6 @@ const de: Translation = {
   },
   projects: {
     title: 'Aktuelle Arbeiten',
-    viewProject: 'Projekt ansehen',
-    openDetail: 'Projekt öffnen',
     back: 'Zurück zur Übersicht',
     client: 'Auftraggeber',
     highlights: 'Was sie kann',
@@ -451,7 +432,6 @@ const de: Translation = {
       message: 'Nachricht',
       submit: 'Nachricht senden',
       sending: 'Wird gesendet…',
-      required: 'Pflichtfeld',
     },
     status: {
       success: 'Nachricht gesendet! Danke für deine Nachricht.',
@@ -459,7 +439,6 @@ const de: Translation = {
         'Die Nachricht konnte nicht gesendet werden. Bitte versuche es erneut.',
       network:
         'Keine Verbindung zum Server. Prüfe dein Netzwerk und versuche es erneut.',
-      retry: 'Erneut versuchen',
       sendAnother: 'Weitere Nachricht senden',
     },
     validation: {
