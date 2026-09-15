@@ -1,13 +1,27 @@
 import { ArrowUp } from 'lucide-react'
+import { useState } from 'react'
 import { SITE } from '../../config/site'
 import { useLanguage } from '../../hooks/useLanguage'
 import { useScrollTo } from '../../hooks/useScrollTo'
+import { useVisitCount } from '../../hooks/useVisitCount'
 import './footer.css'
 
 export function Footer() {
   const { t } = useLanguage()
   const scrollTo = useScrollTo()
   const year = new Date().getFullYear()
+
+  /**
+   * How many times the site has been opened, hidden behind the name in the
+   * colophon and dressed as a build number — `v1.2317` reads as a version, not
+   * as a tally, which is the point.
+   *
+   * Until the count arrives the name is plain text, not a button that does
+   * nothing: if the counter is unreachable there is no dead control to press,
+   * and the line is the line it always was.
+   */
+  const visits = useVisitCount()
+  const [stamped, setStamped] = useState(false)
 
   return (
     <>
@@ -28,7 +42,24 @@ export function Footer() {
           </div>
 
           <p className="footer__legal">
-            © {year} {SITE.name} · {t.footer.location} · {t.footer.rights}
+            ©{' '}
+            {year}{' '}
+            {visits === null ? (
+              SITE.name
+            ) : (
+              <button
+                type="button"
+                className="footer__stamp-toggle"
+                aria-expanded={stamped}
+                onClick={() => setStamped((on) => !on)}
+              >
+                {SITE.name}
+              </button>
+            )}{' '}
+            · {t.footer.location} · {t.footer.rights}
+            {stamped && visits !== null && (
+              <span className="footer__stamp"> · v1.{visits}</span>
+            )}
           </p>
         </div>
       </footer>

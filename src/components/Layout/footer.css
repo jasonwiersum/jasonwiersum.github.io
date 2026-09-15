@@ -62,3 +62,29 @@
     padding-block-end: var(--space-6);
   }
 }
+
+/* The name in the colophon, which opens the build stamp. It has to read as the
+   sentence it sits in, so everything but the hover is inherited: a <button>
+   brings its own padding, and the surrounding text is one line of running
+   prose that a gap in the middle of would give away. */
+.footer__stamp-toggle {
+  padding: 0;
+  /* A <button> carries its own `line-height: normal`, which is taller than the
+     paragraph's and grows the line box it sits in. Invisible on a desktop, one
+     pixel on a phone, where the colophon wraps onto two lines — measured, and
+     the point of the element is that nobody can tell it is one. */
+  line-height: inherit;
+  vertical-align: baseline;
+  /* The page's own convention: the cursor stays the arrow everywhere, and what
+     marks a control is its hover. Kept faint — this is meant to be found, not
+     advertised. */
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+.footer__stamp-toggle:hover {
+  color: var(--muted);
+}
+
+.footer__stamp {
+  font-variant-numeric: tabular-nums;
+}
