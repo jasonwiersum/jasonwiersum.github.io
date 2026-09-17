@@ -56,16 +56,28 @@ export function useSectionObserver(sectionIds: readonly string[], line = LINE): 
       const found = rects()
       if (found.length === 0) return null
 
-      const reading = window.innerHeight * line
-      // The last section that starts above the line is the one the line is in.
-      // Nothing above it yet means the page is still at the very top.
+      const remaining =
+        document.documentElement.scrollHeight - window.innerHeight - window.scrollY
+
+      // The line slides down as the document runs out. A short last section
+      // under a footer can never climb to 45% — the page stops scrolling first
+      // — so instead the line comes to meet it, by exactly as much as the page
+      // still owes. Away from the foot this adds nothing and the line is where
+      // it always was.
+      let reading = window.innerHeight * line
+      if (remaining < reading) reading += reading - remaining
+
+      // The last section that starts above the line. While the line is inside
+      // the page that is the section it falls in; at the foot, where the line
+      // can end up past the last section entirely, it is still the right one.
       let winner = found[0].id
       for (const entry of found) {
         if (entry.top <= reading) winner = entry.id
       }
 
-      const remaining =
-        document.documentElement.scrollHeight - window.innerHeight - window.scrollY
+      // A footer taller than the slide can still outrun it, so the very end of
+      // the document keeps a plain rule: the last section with anything on
+      // screen.
       if (remaining <= END) {
         const last = [...found].reverse().find((entry) => entry.top < window.innerHeight)
         if (last) winner = last.id
