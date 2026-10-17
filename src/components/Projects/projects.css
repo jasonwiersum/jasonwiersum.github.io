@@ -838,3 +838,9 @@
   font-size: var(--text-micro);
   color: var(--faint);
 }
+
+/* A black-on-transparent mark (file name ending in "-mono") would vanish on the
+   dark cover, so it is inverted to white there. */
+[data-theme='dark'] .project__logo[src$='-mono.png'] {
+  filter: invert(1);
+}

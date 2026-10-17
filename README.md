@@ -273,8 +273,7 @@ Edit **`src/data/projects.ts`**. Each entry has:
 }
 ```
 
-Two of the three entries are real; the third is still a placeholder and is
-visibly marked as one. Cover images go in `public/images/`; without one, a
+All three entries are real projects. Cover images go in `public/images/`; without one, a
 generated cover is used.
 
 ### The live repository panel
@@ -396,10 +395,8 @@ BASE_PATH=/my-repo/ npm run build
 
 Everything the earlier drafts of this list were waiting on has since landed: the
 CV, the wave clip, the Bürgermeisterverzeichnis mark, the Open Graph image and
-two real projects are all in the repository. What is left:
+the three projects are all in the repository. What is left:
 
-- [ ] The third project in `src/data/projects.ts` — still placeholder copy,
-      and the card says so
 - [ ] A public email address, if you want one shown next to the form
 - [ ] A `GITHUB_TOKEN` is only available inside GitHub Actions, so a local
       `npm run build` produces a site without the repository panel. That is
