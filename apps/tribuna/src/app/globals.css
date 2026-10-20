@@ -1,0 +1,153 @@
+@import 'tailwindcss';
+
+/*
+ * Colores del club como propiedades registradas: así el cambio de equipo
+ * interpola el color en lugar de saltar.
+ */
+@property --team-accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #2b4fb8;
+}
+@property --team-accent-2 {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #a8842c;
+}
+@property --team-glow {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+
+:root {
+  color-scheme: light dark;
+  --surface: #f5f5f7;
+  --ink: #1d1d1f;
+  --ink-2: #6e6e73;
+  --ink-3: #a1a1a6;
+  --card: rgb(255 255 255 / 0.72);
+  --card-solid: #ffffff;
+  --hairline: rgb(0 0 0 / 0.08);
+  --fill: rgb(120 120 128 / 0.12);
+  --win: #248a3d;
+  --draw: #8e8e93;
+  --loss: #d70015;
+  --live: #ff3b30;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #000000;
+    --ink: #f5f5f7;
+    --ink-2: #a1a1a6;
+    --ink-3: #6e6e73;
+    --card: rgb(28 28 30 / 0.72);
+    --card-solid: #1c1c1e;
+    --hairline: rgb(255 255 255 / 0.1);
+    --fill: rgb(120 120 128 / 0.24);
+    --win: #30d158;
+    --draw: #98989d;
+    --loss: #ff453a;
+    --live: #ff453a;
+  }
+}
+
+/* Real Madrid: blanco puro, azul real, dorado discreto */
+[data-team='real-madrid'] {
+  --team-accent: #2b4fb8;
+  --team-accent-2: #a8842c;
+  --team-glow: rgb(168 132 44 / 0.14);
+}
+/* FC Barcelona: grana y azulgrana suave */
+[data-team='barcelona'] {
+  --team-accent: #a50044;
+  --team-accent-2: #2f6fc4;
+  --team-glow: rgb(165 0 68 / 0.12);
+}
+/* Atlético de Madrid: rojo carmesí y azul marino */
+[data-team='atletico'] {
+  --team-accent: #cb3524;
+  --team-accent-2: #3a5a9c;
+  --team-glow: rgb(203 53 36 / 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-team='real-madrid'] {
+    --team-accent: #6d8ff0;
+    --team-accent-2: #ad8a35;
+    --team-glow: rgb(109 143 240 / 0.16);
+  }
+  [data-team='barcelona'] {
+    --team-accent: #e0457f;
+    --team-accent-2: #5b8fe0;
+    --team-glow: rgb(224 69 127 / 0.16);
+  }
+  [data-team='atletico'] {
+    --team-accent: #ec5a47;
+    --team-accent-2: #6f8fd6;
+    --team-glow: rgb(236 90 71 / 0.16);
+  }
+}
+
+[data-team] {
+  transition:
+    --team-accent 500ms ease,
+    --team-accent-2 500ms ease,
+    --team-glow 500ms ease;
+}
+
+@theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', var(--font-inter), system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', var(--font-inter), system-ui, sans-serif;
+
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-card: var(--card);
+  --color-card-solid: var(--card-solid);
+  --color-hairline: var(--hairline);
+  --color-fill: var(--fill);
+  --color-accent: var(--team-accent);
+  --color-accent-2: var(--team-accent-2);
+  --color-win: var(--win);
+  --color-draw: var(--draw);
+  --color-loss: var(--loss);
+  --color-live: var(--live);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--surface);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: 'tnum' 0;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--team-accent) 25%, transparent);
+  }
+}
+
+@utility glass {
+  background: var(--card);
+  border: 1px solid var(--hairline);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
