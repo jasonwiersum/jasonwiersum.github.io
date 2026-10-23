@@ -29,10 +29,10 @@ export interface ProjectDetail {
    */
   images?: string[]
   /**
-   * A short demo clip, relative to `public/` and without a leading slash. Only
-   * the poster is fetched up front; the file loads when play is pressed.
+   * A short demo clip per language, relative to `public/` and without a leading
+   * slash. Only the poster is fetched up front; the file loads when play is pressed.
    */
-  video?: { src: string; poster: string }
+  video?: Record<Language, { src: string; poster: string }>
 }
 
 export interface Project {
@@ -245,7 +245,11 @@ export const projects: Project[] = [
         'images/projects/proentreno-06.png',
         'images/projects/proentreno-07.png',
       ],
-      video: { src: 'videos/proentreno-brag.mp4', poster: 'videos/proentreno-brag-poster.jpg' },
+      video: {
+        es: { src: 'videos/proentreno-brag-es.mp4', poster: 'videos/proentreno-brag-es-poster.jpg' },
+        en: { src: 'videos/proentreno-brag-en.mp4', poster: 'videos/proentreno-brag-en-poster.jpg' },
+        de: { src: 'videos/proentreno-brag-de.mp4', poster: 'videos/proentreno-brag-de-poster.jpg' },
+      },
       body: {
         es: [
           'Es la herramienta con la que un entrenador personal lleva su negocio desde el móvil: sus clientes, lo que le pagan y cuándo, los planes de entrenamiento y dieta que les entrega y cómo evolucionan. Es una aplicación web instalable (PWA): en el iPhone se abre desde la pantalla de inicio como una app más. Las capturas usan un nombre, un logo y unos clientes ficticios.',

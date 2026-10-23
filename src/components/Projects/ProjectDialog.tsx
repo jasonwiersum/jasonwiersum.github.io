@@ -88,7 +88,7 @@ export function ProjectDialog({ project, origin, onClose }: Props) {
                 </ul>
               </section>
 
-              {detail.video ? <Demo video={detail.video} title={project.title[language]} label={t.projects.video} /> : null}
+              {detail.video ? <Demo key={language} video={detail.video[language]} title={project.title[language]} label={t.projects.video} /> : null}
 
               <Shots images={detail.images ?? []} title={project.title[language]} />
             </>
