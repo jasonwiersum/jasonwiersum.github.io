@@ -88,6 +88,8 @@ export function ProjectDialog({ project, origin, onClose }: Props) {
                 </ul>
               </section>
 
+              {detail.video ? <Demo video={detail.video} title={project.title[language]} label={t.projects.video} /> : null}
+
               <Shots images={detail.images ?? []} title={project.title[language]} />
             </>
           ) : null}
@@ -131,6 +133,31 @@ export function ProjectDialog({ project, origin, onClose }: Props) {
       </div>
     </div>,
     document.body,
+  )
+}
+
+/** A short demo clip. Only the poster is fetched up front (`preload="none"`),
+ *  so opening the dialog does not cost the video's weight; it drops out if the
+ *  file is missing. */
+function Demo({ video, title, label }: { video: { src: string; poster: string }; title: string; label: string }) {
+  const [broken, setBroken] = useState(false)
+  if (broken) return null
+  const base = import.meta.env.BASE_URL
+  return (
+    <section className="dialog__section">
+      <h3 className="dialog__section-title">{label}</h3>
+      <figure className="dialog__video">
+        <video
+          controls
+          playsInline
+          preload="none"
+          poster={`${base}${video.poster.replace(/^\//, '')}`}
+          src={`${base}${video.src.replace(/^\//, '')}`}
+          aria-label={title}
+          onError={() => setBroken(true)}
+        />
+      </figure>
+    </section>
   )
 }
 

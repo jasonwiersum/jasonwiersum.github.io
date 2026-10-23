@@ -28,6 +28,11 @@ export interface ProjectDetail {
    * load removes itself, so the dialog never shows a broken thumbnail.
    */
   images?: string[]
+  /**
+   * A short demo clip, relative to `public/` and without a leading slash. Only
+   * the poster is fetched up front; the file loads when play is pressed.
+   */
+  video?: { src: string; poster: string }
 }
 
 export interface Project {
@@ -221,9 +226,9 @@ export const projects: Project[] = [
       de: 'ProEntreno',
     },
     description: {
-      es: 'Aplicación web instalable para entrenadores personales: clientes y cobros, planes de entrenamiento y dieta en PDF, seguimiento del peso con fotos de antes y ahora, y recordatorios de pago por WhatsApp, email y notificaciones push.',
-      en: 'An installable web app for personal trainers: clients and payments, training and diet plans as PDFs, weight tracking with before-and-after photos, and payment reminders over WhatsApp, email and push notifications.',
-      de: 'Installierbare Web-App für Personal Trainer: Kunden und Zahlungen, Trainings- und Ernährungspläne als PDF, Gewichtsverlauf mit Vorher-nachher-Fotos sowie Zahlungserinnerungen per WhatsApp, E-Mail und Push-Benachrichtigung.',
+      es: 'Aplicación web instalable para entrenadores personales: clientes y cobros, planes de entrenamiento y dieta en PDF, seguimiento del peso con fotos de antes y ahora, cuestionario inicial y check-ins automáticos para los clientes, y recordatorios de pago por WhatsApp, email y notificaciones push.',
+      en: 'An installable web app for personal trainers: clients and payments, training and diet plans as PDFs, weight tracking with before-and-after photos, an initial questionnaire and automatic check-ins for clients, and payment reminders over WhatsApp, email and push notifications.',
+      de: 'Installierbare Web-App für Personal Trainer: Kunden und Zahlungen, Trainings- und Ernährungspläne als PDF, Gewichtsverlauf mit Vorher-nachher-Fotos, Erstfragebogen und automatische Check-ins für Kunden sowie Zahlungserinnerungen per WhatsApp, E-Mail und Push-Benachrichtigung.',
     },
     technologies: ['React', 'TypeScript', 'Vite', 'Supabase', 'PostgreSQL', 'PWA'],
     image: null,
@@ -235,28 +240,36 @@ export const projects: Project[] = [
         'images/projects/proentreno-01.png',
         'images/projects/proentreno-02.png',
         'images/projects/proentreno-03.png',
+        'images/projects/proentreno-04.png',
+        'images/projects/proentreno-05.png',
+        'images/projects/proentreno-06.png',
+        'images/projects/proentreno-07.png',
       ],
+      video: { src: 'videos/proentreno-brag.mp4', poster: 'videos/proentreno-brag-poster.jpg' },
       body: {
         es: [
           'Es la herramienta con la que un entrenador personal lleva su negocio desde el móvil: sus clientes, lo que le pagan y cuándo, los planes de entrenamiento y dieta que les entrega y cómo evolucionan. Es una aplicación web instalable (PWA): en el iPhone se abre desde la pantalla de inicio como una app más. Las capturas usan un nombre, un logo y unos clientes ficticios.',
           'La agenda de pagos agrupa a los clientes por urgencia —vencidos, esta semana, próximas dos semanas, al día— y un toque registra el pago y adelanta la siguiente fecha, sea mensual, trimestral o anual. Un calendario de ingresos colorea cada día según el estado de sus cobros. Cuando un pago vence, la app avisa con una notificación push y deja recordárselo al cliente por WhatsApp o por email, o hacerlo de forma automática.',
+          'Los clientes nuevos no necesitan cuenta ni instalar nada: un enlace general, que el entrenador pone en su Instagram, abre un cuestionario inicial con contacto, salud, hábitos, fotos de frente, de perfil y de espalda y una foto de perfil opcional. Al enviarlo, el entrenador recibe un aviso y el cliente aparece como «por revisar»; si lo acepta, entra en la agenda con sus respuestas ya añadidas a la nota del plan. Después, cada dos semanas la app envía por email un check-in —peso, fotos nuevas y cuatro valoraciones de energía, hambre, sueño y cumplimiento— que se guarda en el seguimiento; si el cliente no responde, se le reenvía a los tres días y se avisa al entrenador. Siete días antes de que termine un plan aparece un aviso de renovación, y un bloque de pendientes en la agenda reúne todo lo que espera una respuesta. La interfaz está en español, inglés y alemán.',
           'Los planes parten de los datos y las notas del cliente: una lesión aparta los ejercicios que la cargan y una alergia, los alimentos que la contienen. Un generador propone el entrenamiento por días, con la ilustración y el mapa muscular de cada ejercicio, y una dieta con los macros calculados sobre una base de más de 125 alimentos, donde cada alimento admite alternativas («100 g de lomo embuchado o jamón serrano o pechuga de pavo»). El plan pasa de borrador a aprobado y a enviado, y el PDF se genera en el propio navegador con el logo y los datos del entrenador.',
           'La sección de seguimiento guarda el peso de cada fecha con las fotos que manda el cliente, lo dibuja en una gráfica que se puede tocar para ver cada registro y compone una imagen de antes y ahora en formato historia de Instagram, con el logo del entrenador, lista para compartir o descargar.',
-          'Detrás está Supabase: PostgreSQL con Row Level Security, de modo que solo las cuentas autorizadas llegan a los datos; almacenamiento privado para el logo y las fotos; y Edge Functions en Deno para los emails con Brevo, las notificaciones Web Push y los recordatorios diarios. Un modo sandbox, solo para mi cuenta, copia los datos al dispositivo para probar cambios sin tocar los reales. El frontend se despliega en Vercel con cada push y la versión que corre, con su número de despliegue, aparece en los ajustes.',
+          'Detrás está Supabase: PostgreSQL con Row Level Security, de modo que solo las cuentas autorizadas llegan a los datos; almacenamiento privado para el logo y las fotos; y Edge Functions en Deno para los emails con Brevo, las notificaciones Web Push, los recordatorios diarios, el seguimiento automático y los formularios públicos, que reciben solo un token por cliente y llevan un campo trampa contra bots. Un modo sandbox, solo para mi cuenta, copia los datos al dispositivo para probar cambios sin tocar los reales. El frontend se despliega en Vercel con cada push y la versión que corre, con su número de despliegue, aparece en los ajustes.',
         ],
         en: [
           'It is the tool a personal trainer runs the business with from a phone: the clients, what they pay and when, the training and diet plans they receive and how they progress. It is an installable web app (PWA): on the iPhone it opens from the home screen like any other app. The screenshots use a made-up name, logo and clients.',
           'The payment agenda groups clients by urgency — overdue, this week, the next two weeks, up to date — and one tap records a payment and moves the next date on, whether monthly, quarterly or yearly. An income calendar colours each day by the state of its payments. When a payment falls due, the app sends a push notification and offers to remind the client over WhatsApp or email, or to do it automatically.',
+          'New clients need no account and nothing to install: a general link, which the trainer puts on their Instagram, opens an initial questionnaire covering contact details, health, habits, front, side and back photos and an optional profile picture. When it is sent, the trainer gets an alert and the client appears as “to review”; once accepted, they join the agenda with their answers already added to the plan note. From then on, every two weeks the app emails a check-in — weight, new photos and four ratings for energy, hunger, sleep and adherence — which is stored in the tracking; if the client does not reply, it is sent again after three days and the trainer is alerted. Seven days before a plan ends a renewal notice appears, and a pending block in the agenda gathers everything that is waiting for an answer. The interface is in Spanish, English and German.',
           'Plans start from the client’s data and notes: an injury keeps out the exercises that load it, an allergy the foods that contain it. A generator proposes the training day by day, with an illustration and a muscle map for every exercise, and a diet whose macros are worked out from a base of more than 125 foods, where any food can carry alternatives (“100 g of cured pork loin or serrano ham or turkey breast”). A plan moves from draft to approved to sent, and the PDF is rendered in the browser itself with the trainer’s logo and details.',
           'The tracking section stores each date’s weight with the photos the client sends, draws it on a chart you can tap to read any entry, and composes a before-and-after image in Instagram story format, carrying the trainer’s logo, ready to share or download.',
-          'Behind it is Supabase: PostgreSQL with Row Level Security, so that only authorised accounts reach the data; private storage for the logo and photos; and Edge Functions on Deno for email through Brevo, Web Push notifications and the daily reminders. A sandbox mode, open to my account only, copies the data onto the device to try changes without touching the real records. The frontend deploys to Vercel on every push, and the running version, with its deploy number, is shown in the settings.',
+          'Behind it is Supabase: PostgreSQL with Row Level Security, so that only authorised accounts reach the data; private storage for the logo and photos; and Edge Functions on Deno for email through Brevo, Web Push notifications, the daily reminders, the automatic follow-ups and the public forms, which take only a per-client token and carry a honeypot field against bots. A sandbox mode, open to my account only, copies the data onto the device to try changes without touching the real records. The frontend deploys to Vercel on every push, and the running version, with its deploy number, is shown in the settings.',
         ],
         de: [
           'Es ist das Werkzeug, mit dem ein Personal Trainer sein Geschäft vom Handy aus führt: seine Kunden, was sie ihm wann zahlen, die Trainings- und Ernährungspläne, die sie bekommen, und wie sie sich entwickeln. Es ist eine installierbare Web-App (PWA): Auf dem iPhone öffnet sie sich vom Homescreen wie jede andere App. Die Screenshots zeigen einen erfundenen Namen, ein erfundenes Logo und erfundene Kunden.',
           'Die Zahlungsagenda ordnet die Kunden nach Dringlichkeit — überfällig, diese Woche, nächste zwei Wochen, aktuell —, und ein Tippen verbucht die Zahlung und schiebt den nächsten Termin weiter, monatlich, quartalsweise oder jährlich. Ein Einnahmenkalender färbt jeden Tag nach dem Stand seiner Zahlungen. Wird eine Zahlung fällig, meldet sich die App per Push-Benachrichtigung und bietet an, den Kunden per WhatsApp oder E-Mail zu erinnern, auf Wunsch auch automatisch.',
+          'Neue Kunden brauchen weder ein Konto noch eine Installation: Ein allgemeiner Link, den der Trainer auf Instagram setzt, öffnet einen Erstfragebogen mit Kontaktdaten, Gesundheit, Gewohnheiten, Fotos von vorn, von der Seite und von hinten sowie einem optionalen Profilbild. Nach dem Absenden bekommt der Trainer einen Hinweis und der Kunde erscheint als „zu prüfen“; wird er angenommen, landet er mit seinen Antworten, die schon in der Plannotiz stehen, in der Agenda. Danach schickt die App alle zwei Wochen per E-Mail einen Check-in — Gewicht, neue Fotos und vier Bewertungen zu Energie, Hunger, Schlaf und Einhaltung —, der im Verlauf gespeichert wird; antwortet der Kunde nicht, wird er nach drei Tagen erneut verschickt und der Trainer informiert. Sieben Tage vor dem Ende eines Plans erscheint ein Verlängerungshinweis, und ein Block mit offenen Punkten in der Agenda sammelt alles, was auf eine Antwort wartet. Die Oberfläche gibt es auf Spanisch, Englisch und Deutsch.',
           'Die Pläne gehen von den Daten und Notizen des Kunden aus: Eine Verletzung hält die Übungen fern, die sie belasten, eine Allergie die Lebensmittel, die sie enthalten. Ein Generator schlägt das Training Tag für Tag vor, mit Illustration und Muskelkarte zu jeder Übung, dazu eine Ernährung, deren Makros aus einer Basis von über 125 Lebensmitteln berechnet werden; jedes Lebensmittel kann Alternativen tragen („100 g Lomo embuchado oder Serranoschinken oder Putenbrust“). Ein Plan geht vom Entwurf über die Freigabe bis zum Versand, und das PDF entsteht direkt im Browser mit Logo und Kontaktdaten des Trainers.',
           'Der Bereich Verlauf speichert das Gewicht jedes Datums mit den Fotos, die der Kunde schickt, zeichnet es in ein Diagramm, in dem ein Tippen jeden Eintrag zeigt, und setzt ein Vorher-nachher-Bild im Format einer Instagram-Story zusammen, mit dem Logo des Trainers, bereit zum Teilen oder Herunterladen.',
-          'Dahinter steht Supabase: PostgreSQL mit Row Level Security, sodass nur berechtigte Konten an die Daten kommen; privater Speicher für Logo und Fotos; und Edge Functions auf Deno für den E-Mail-Versand über Brevo, die Web-Push-Benachrichtigungen und die täglichen Erinnerungen. Ein Sandbox-Modus, nur für mein Konto, kopiert die Daten aufs Gerät, um Änderungen zu testen, ohne die echten Daten anzurühren. Das Frontend geht bei jedem Push auf Vercel live, und die laufende Version samt Deploy-Nummer steht in den Einstellungen.',
+          'Dahinter steht Supabase: PostgreSQL mit Row Level Security, sodass nur berechtigte Konten an die Daten kommen; privater Speicher für Logo und Fotos; und Edge Functions auf Deno für den E-Mail-Versand über Brevo, die Web-Push-Benachrichtigungen, die täglichen Erinnerungen, die automatische Nachverfolgung und die öffentlichen Formulare, die nur ein Token pro Kunde annehmen und ein Honeypot-Feld gegen Bots tragen. Ein Sandbox-Modus, nur für mein Konto, kopiert die Daten aufs Gerät, um Änderungen zu testen, ohne die echten Daten anzurühren. Das Frontend geht bei jedem Push auf Vercel live, und die laufende Version samt Deploy-Nummer steht in den Einstellungen.',
         ],
       },
       highlights: {
@@ -267,6 +280,10 @@ export const projects: Project[] = [
           'Planes de entrenamiento y dieta adaptados a lesiones y alergias',
           'Alimentos con alternativas y PDF con la marca del entrenador',
           'Seguimiento del peso con gráfica, fotos e imagen de antes y ahora',
+          'Cuestionario inicial público con fotos y foto de perfil, sin crear cuenta',
+          'Check-in automático cada dos semanas por email, con peso, fotos y valoraciones',
+          'Aviso de renovación del plan y bloque de pendientes en la agenda',
+          'Disponible en español, inglés y alemán',
           'Row Level Security y Edge Functions para email, Web Push y avisos diarios',
         ],
         en: [
@@ -276,6 +293,10 @@ export const projects: Project[] = [
           'Training and diet plans adapted to injuries and allergies',
           'Foods with alternatives, PDFs in the trainer’s branding',
           'Weight tracking with a chart, photos and a before-and-after image',
+          'Public initial questionnaire with photos and a profile picture, no account needed',
+          'Automatic check-in every two weeks by email, with weight, photos and ratings',
+          'Plan renewal notice and a pending block in the agenda',
+          'Available in Spanish, English and German',
           'Row Level Security and Edge Functions for email, Web Push and daily alerts',
         ],
         de: [
@@ -285,6 +306,10 @@ export const projects: Project[] = [
           'Trainings- und Ernährungspläne, angepasst an Verletzungen und Allergien',
           'Lebensmittel mit Alternativen, PDFs im Branding des Trainers',
           'Gewichtsverlauf mit Diagramm, Fotos und Vorher-nachher-Bild',
+          'Öffentlicher Erstfragebogen mit Fotos und Profilbild, ohne Konto',
+          'Automatischer Check-in alle zwei Wochen per E-Mail, mit Gewicht, Fotos und Bewertungen',
+          'Verlängerungshinweis für den Plan und Block mit offenen Punkten in der Agenda',
+          'Verfügbar auf Spanisch, Englisch und Deutsch',
           'Row Level Security und Edge Functions für E-Mail, Web Push und tägliche Hinweise',
         ],
       },
