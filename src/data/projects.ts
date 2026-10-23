@@ -232,7 +232,7 @@ export const projects: Project[] = [
     },
     technologies: ['React', 'TypeScript', 'Vite', 'Supabase', 'PostgreSQL', 'PWA'],
     image: null,
-    logo: 'images/projects/proentreno-logo-mono.png',
+    logo: 'images/projects/proentreno-logo.png',
     url: null,
     detail: {
       tooling: ['Git', 'GitHub', 'Vercel', 'Vitest', 'Playwright'],
