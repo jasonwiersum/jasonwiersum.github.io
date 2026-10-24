@@ -862,3 +862,8 @@
 [data-theme='dark'] .project__logo[src$='-mono.png'] {
   filter: invert(1);
 }
+
+/* Logo with a light and a dark variant: only the one for the active theme shows. */
+.project__logo--dark { display: none; }
+[data-theme='dark'] .project__logo--light { display: none; }
+[data-theme='dark'] .project__logo--dark { display: block; }

@@ -47,14 +47,25 @@ export function ProjectCard({ project, index, onOpen }: Props) {
     <>
       <span className="project__cover" data-index={index} data-preview={preview ? '' : undefined}>
         {logo ? (
-          <img
-            className="project__logo"
-            src={`${import.meta.env.BASE_URL}${logo.replace(/^\//, '')}`}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            onError={() => setLogoBroken(true)}
-          />
+          <>
+            <img
+              className={`project__logo${project.logoDark ? ' project__logo--light' : ''}`}
+              src={`${import.meta.env.BASE_URL}${logo.replace(/^\//, '')}`}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              onError={() => setLogoBroken(true)}
+            />
+            {project.logoDark ? (
+              <img
+                className="project__logo project__logo--dark"
+                src={`${import.meta.env.BASE_URL}${project.logoDark.replace(/^\//, '')}`}
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
+            ) : null}
+          </>
         ) : client ? (
           <span className="project__client">{client}</span>
         ) : (

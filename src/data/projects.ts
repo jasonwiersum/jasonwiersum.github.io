@@ -50,6 +50,8 @@ export interface Project {
    * without one the card sets the client's name instead.
    */
   logo?: string | null
+  /** Variant of `logo` for the dark theme; when set, the card swaps to it. */
+  logoDark?: string | null
   /** Live/repository URL, or `null` when there is nothing to link to yet. */
   url: string | null
   /**
@@ -232,7 +234,8 @@ export const projects: Project[] = [
     },
     technologies: ['React', 'TypeScript', 'Vite', 'Supabase', 'PostgreSQL', 'PWA'],
     image: null,
-    logo: 'images/projects/proentreno-logo.png',
+    logo: 'images/projects/proentreno-mancuerna-negra.png',
+    logoDark: 'images/projects/proentreno-mancuerna-blanca.png',
     url: null,
     detail: {
       tooling: ['Git', 'GitHub', 'Vercel', 'Vitest', 'Playwright'],
