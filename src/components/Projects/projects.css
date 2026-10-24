@@ -598,6 +598,10 @@
   flex-direction: column;
   gap: var(--space-4);
   margin-block-start: var(--space-6);
+  /* How far a click enlarges a screenshot. One value, read by the stylesheet
+     for the transform and by the script for how far the picture may be
+     dragged, so the two can never disagree about where its edges are. */
+  --shot-zoom: 2;
 }
 
 .dialog__shots figure {
@@ -613,14 +617,32 @@
   width: 100%;
   height: auto;
   cursor: zoom-in;
+  /* Where the picture has been dragged to, written by the script. The origin
+     is the top left so the offset is a plain distance from it, which is what
+     makes the limits arithmetic rather than guesswork. */
+  --sx: 0px;
+  --sy: 0px;
+  transform-origin: 0 0;
+  transform: translate3d(var(--sx), var(--sy), 0);
   transition: transform 520ms var(--ease-out);
 }
 
 /* Click to enlarge, around the point clicked. These are dense interface
-   captures shown well under their own size. */
+   captures shown well under their own size — so once in, it can be dragged
+   around to read the rest. */
 .dialog__shots figure[data-zoomed] img {
-  transform: scale(2);
-  cursor: zoom-out;
+  transform: translate3d(var(--sx), var(--sy), 0) scale(var(--shot-zoom));
+  cursor: grab;
+  /* The drag belongs to the picture now. Without this a finger would scroll
+     the dialog instead and the picture would never move. */
+  touch-action: none;
+}
+
+.dialog__shots figure[data-zoomed] img[data-panning] {
+  cursor: grabbing;
+  /* Following a finger has to be immediate. The ease is for the zoom, and
+     leaving it on makes the picture lag behind the hand dragging it. */
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
